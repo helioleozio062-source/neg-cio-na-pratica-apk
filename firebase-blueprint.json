@@ -1,0 +1,201 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile with ownership and contact details",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Auth UID of the user" },
+        "email": { "type": "string", "description": "Email address" },
+        "fullName": { "type": "string", "description": "User full name" },
+        "role": { "type": "string", "enum": ["OWNER", "ADMIN"], "description": "Platform role" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp via serverTimestamp()" }
+      },
+      "required": ["userId", "email", "fullName", "role", "createdAt"]
+    },
+    "Business": {
+      "title": "Business",
+      "description": "Business profile owned by a user",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner UID" },
+        "name": { "type": "string", "description": "Business trade name" },
+        "activityType": { "type": "string", "description": "Sector of activity" },
+        "currencySymbol": { "type": "string", "description": "Currency abbreviation (MT - Metical Moçambique, Kz, R$, €, $)" },
+        "defaultUnit": { "type": "string", "description": "Default measuring unit" },
+        "phone": { "type": "string", "description": "Contact phone" },
+        "address": { "type": "string", "description": "Physical address" },
+        "taxNumber": { "type": "string", "description": "Tax ID / NIF" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Update timestamp" }
+      },
+      "required": ["userId", "name", "activityType", "currencySymbol", "defaultUnit", "createdAt"]
+    },
+    "Category": {
+      "title": "Category",
+      "description": "Product category within a business",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner UID" },
+        "businessId": { "type": "string", "description": "Parent business ID" },
+        "name": { "type": "string", "description": "Category name" },
+        "iconName": { "type": "string", "description": "Icon identifier" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["userId", "businessId", "name", "createdAt"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Inventory product item",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner UID" },
+        "businessId": { "type": "string", "description": "Parent business ID" },
+        "categoryId": { "type": "string", "description": "Category ID" },
+        "name": { "type": "string", "description": "Product display name" },
+        "sku": { "type": "string", "description": "Stock Keeping Unit / Barcode" },
+        "purchasePrice": { "type": "number", "description": "Cost purchase price" },
+        "sellingPrice": { "type": "number", "description": "Retail selling price" },
+        "currentStock": { "type": "number", "description": "Available stock quantity" },
+        "minStockAlert": { "type": "number", "description": "Low stock alert threshold" },
+        "unit": { "type": "string", "description": "Unit of measure" },
+        "sizes": { "type": "string", "description": "Available sizes" },
+        "colors": { "type": "string", "description": "Available colors" },
+        "isActive": { "type": "boolean", "description": "Active status toggle" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Update timestamp" }
+      },
+      "required": ["userId", "businessId", "name", "purchasePrice", "sellingPrice", "currentStock", "unit", "createdAt"]
+    },
+    "StockMovement": {
+      "title": "StockMovement",
+      "description": "Audit trail log of all inventory changes",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner UID" },
+        "businessId": { "type": "string", "description": "Parent business ID" },
+        "productId": { "type": "string", "description": "Referenced product ID" },
+        "productName": { "type": "string", "description": "Product name at time of movement" },
+        "type": { "type": "string", "description": "Movement type" },
+        "quantity": { "type": "number", "description": "Quantity moved" },
+        "previousStock": { "type": "number", "description": "Stock before movement" },
+        "newStock": { "type": "number", "description": "Stock after movement" },
+        "unitCost": { "type": "number", "description": "Unit cost" },
+        "reason": { "type": "string", "description": "Note or adjustment reason" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["userId", "businessId", "productId", "type", "quantity", "previousStock", "newStock", "createdAt"]
+    },
+    "Sale": {
+      "title": "Sale",
+      "description": "Customer purchase transaction / POS record",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner UID" },
+        "businessId": { "type": "string", "description": "Parent business ID" },
+        "customerName": { "type": "string", "description": "Customer name" },
+        "totalAmount": { "type": "number", "description": "Total sale price" },
+        "discount": { "type": "number", "description": "Discount applied" },
+        "paymentStatus": { "type": "string", "enum": ["PAID", "CREDIT"], "description": "Payment condition" },
+        "paymentMethod": { "type": "string", "description": "Cash, Multicaixa, Transfer" },
+        "amountPaid": { "type": "number", "description": "Amount received" },
+        "amountDue": { "type": "number", "description": "Remaining debt amount" },
+        "notes": { "type": "string", "description": "Observations" },
+        "isCancelled": { "type": "boolean", "description": "Whether sale was cancelled" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["userId", "businessId", "totalAmount", "paymentStatus", "paymentMethod", "amountPaid", "createdAt"]
+    },
+    "FinancialTransaction": {
+      "title": "FinancialTransaction",
+      "description": "Cash flow record (Income, Expense, Withdrawal, Debt)",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner UID" },
+        "businessId": { "type": "string", "description": "Parent business ID" },
+        "type": { "type": "string", "description": "Transaction type" },
+        "category": { "type": "string", "description": "Account category" },
+        "amount": { "type": "number", "description": "Money value" },
+        "description": { "type": "string", "description": "Description details" },
+        "referenceId": { "type": "string", "description": "Linked sale/purchase ID" },
+        "paymentMethod": { "type": "string", "description": "Payment method" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["userId", "businessId", "type", "category", "amount", "description", "createdAt"]
+    },
+    "Debt": {
+      "title": "Debt",
+      "description": "Accounts receivable or payable",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner UID" },
+        "businessId": { "type": "string", "description": "Parent business ID" },
+        "type": { "type": "string", "enum": ["RECEIVABLE", "PAYABLE"], "description": "Debt type" },
+        "partyName": { "type": "string", "description": "Customer or supplier name" },
+        "initialAmount": { "type": "number", "description": "Initial debt balance" },
+        "remainingAmount": { "type": "number", "description": "Outstanding balance" },
+        "status": { "type": "string", "enum": ["PENDING", "PARTIAL", "PAID"], "description": "Payment status" },
+        "referenceId": { "type": "string", "description": "Linked sale/purchase ID" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["userId", "businessId", "type", "partyName", "initialAmount", "remainingAmount", "status", "createdAt"]
+    },
+    "Feedback": {
+      "title": "Feedback",
+      "description": "User reviews, complaints, and platform suggestions",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Submitter UID" },
+        "userEmail": { "type": "string", "description": "Submitter email" },
+        "businessName": { "type": "string", "description": "Business name" },
+        "type": { "type": "string", "enum": ["REVIEW", "COMPLAINT", "SUGGESTION"], "description": "Feedback category" },
+        "rating": { "type": "number", "description": "Rating score 1 to 5" },
+        "category": { "type": "string", "description": "Area classification" },
+        "title": { "type": "string", "description": "Subject header" },
+        "description": { "type": "string", "description": "Detailed text" },
+        "status": { "type": "string", "enum": ["RECEBIDA", "EM_ANALISE", "EM_RESOLUCAO", "RESOLVIDA"], "description": "Resolution status" },
+        "adminNotes": { "type": "string", "description": "Internal admin reply/notes" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["userId", "userEmail", "type", "title", "description", "status", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile documents"
+    },
+    "/businesses/{businessId}": {
+      "schema": "Business",
+      "description": "Businesses owned by users"
+    },
+    "/categories/{categoryId}": {
+      "schema": "Category",
+      "description": "Product categories"
+    },
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Products catalog and current stock"
+    },
+    "/stock_movements/{movementId}": {
+      "schema": "StockMovement",
+      "description": "Stock audit movements"
+    },
+    "/sales/{saleId}": {
+      "schema": "Sale",
+      "description": "Sales and POS invoices"
+    },
+    "/financial_transactions/{transactionId}": {
+      "schema": "FinancialTransaction",
+      "description": "Cash flow transactions and expenses"
+    },
+    "/debts/{debtId}": {
+      "schema": "Debt",
+      "description": "Receivables and payables tracking"
+    },
+    "/feedbacks/{feedbackId}": {
+      "schema": "Feedback",
+      "description": "Platform feedback, complaints and suggestions"
+    }
+  }
+}

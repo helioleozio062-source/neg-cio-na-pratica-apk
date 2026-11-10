@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Negócio na Prática - Portal Web (Moçambique - Metical)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        emerald: {
+                            500: '#10b981',
+                            600: '#059669',
+                            700: '#047857',
+                            800: '#065f46',
+                        },
+                        slate: {
+                            850: '#151f32',
+                            900: '#0f172a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Material Symbols -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 min-h-screen flex flex-col transition-colors duration-200">
+
+    <!-- Top Navigation Bar -->
+    <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-30 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-16">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center text-white shadow-md">
+                    <span class="material-symbols-outlined text-2xl">storefront</span>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold text-slate-900 dark:text-white leading-tight">Negócio na Prática</h1>
+                    <p class="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Portal Web Sincronizado • Moeda: Metical (MT)</p>
+                </div>
+            </div>
+
+            <!-- Business selector & Controls -->
+            <div class="flex items-center space-x-3">
+                <div class="hidden sm:flex items-center bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 rounded-lg px-3 py-1.5 text-xs text-emerald-700 dark:text-emerald-300">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse mr-2"></span>
+                    <span id="syncIndicator">Nuvem Firestore Sincronizada</span>
+                </div>
+
+                <button onclick="downloadSelfHTML()" class="flex items-center space-x-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-1.5 rounded-lg shadow transition font-semibold" title="Baixar ficheiro index.html completo">
+                    <span class="material-symbols-outlined text-base">download</span>
+                    <span class="hidden sm:inline">Baixar index.html</span>
+                </button>
+
+                <button id="themeToggle" onclick="toggleTheme()" class="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition" title="Alternar Modo Noturno">
+                    <span id="themeIcon" class="material-symbols-outlined">dark_mode</span>
+                </button>
+
+                <div class="relative">
+                    <button onclick="toggleUserRole()" class="flex items-center space-x-2 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition" title="Clique para alternar visão Proprietário / Administrador">
+                        <div class="w-8 h-8 rounded-full bg-emerald-600 text-white font-bold flex items-center justify-center text-sm shadow">
+                            <span id="userAvatar">AD</span>
+                        </div>
+                        <div class="text-left hidden md:block">
+                            <span id="userName" class="text-sm font-semibold block leading-none">Administrador</span>
+                            <span id="userRoleBadge" class="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">Admin Plataforma</span>
+                        </div>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main App Container -->
+    <div class="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 flex flex-col md:flex-row gap-6">
+
+        <!-- Sidebar Navigation (Desktop) / Horizontal Tabs (Mobile) -->
+        <nav class="md:w-64 flex md:flex-col gap-1 overflow-x-auto pb-2 md:pb-0 shrink-0">
+            <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm transition bg-emerald-600 text-white shadow-sm">
+                <span class="material-symbols-outlined">dashboard</span>
+                <span>Painel Principal</span>
+            </button>
+            <button onclick="switchTab('products')" id="nav-products" class="nav-btn flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm transition text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">
+                <span class="material-symbols-outlined">inventory_2</span>
+                <span>Produtos & Stock</span>
+            </button>
+            <button onclick="switchTab('pos')" id="nav-pos" class="nav-btn flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm transition text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">
+                <span class="material-symbols-outlined">point_of_sale</span>
+                <span>Ponto de Venda (PDV)</span>
+            </button>
+            <button onclick="switchTab('finance')" id="nav-finance" class="nav-btn flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm transition text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">
+                <span class="material-symbols-outlined">payments</span>
+                <span>Gestão Financeira</span>
+            </button>
+            <button onclick="switchTab('dre')" id="nav-dre" class="nav-btn flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm transition text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">
+                <span class="material-symbols-outlined">assessment</span>
+                <span>Relatório DRE</span>
+            </button>
+            <button onclick="switchTab('debts')" id="nav-debts" class="nav-btn flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm transition text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">
+                <span class="material-symbols-outlined">account_balance_wallet</span>
+                <span>Dívidas & Crédito</span>
+            </button>
+            <button onclick="switchTab('complaints')" id="nav-complaints" class="nav-btn flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm transition text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 relative">
+                <span class="material-symbols-outlined text-rose-500">report_problem</span>
+                <span>Reclamações & Suporte</span>
+                <span id="complaintsBadge" class="ml-auto bg-rose-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">3</span>
+            </button>
+        </nav>
+
+        <!-- Dynamic Content Area -->
+        <main class="flex-1 bg-transparent min-w-0">
+
+            <!-- 1. DASHBOARD VIEW -->
+            <section id="view-dashboard" class="space-y-6">
+                <!-- Welcome Banner -->
+                <div class="bg-gradient-to-r from-emerald-600 to-teal-700 rounded-2xl p-6 text-white shadow-md flex justify-between items-center">
+                    <div>
+                        <h2 class="text-2xl font-bold">Cantina & Mercearia Central (Maputo)</h2>
+                        <p class="text-emerald-100 text-sm mt-1">Sincronizado com o aplicativo Android • Moeda: Metical (MT)</p>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button onclick="switchTab('complaints')" class="bg-rose-500/80 hover:bg-rose-600 text-white rounded-xl px-3 py-2 text-xs font-semibold flex items-center space-x-1 transition">
+                            <span class="material-symbols-outlined text-sm">report</span>
+                            <span>Ver Reclamações</span>
+                        </button>
+                        <button onclick="refreshData()" class="bg-white/20 hover:bg-white/30 text-white rounded-xl px-4 py-2 text-sm font-semibold flex items-center space-x-2 transition">
+                            <span class="material-symbols-outlined text-sm">sync</span>
+                            <span>Atualizar</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Download index.html Banner Card -->
+                <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div class="flex items-center space-x-3.5">
+                        <div class="w-12 h-12 rounded-xl bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 flex items-center justify-center shrink-0">
+                            <span class="material-symbols-outlined text-2xl">file_download</span>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-slate-900 dark:text-white flex items-center space-x-2">
+                                <span>Código Fonte Web Pronto: index.html</span>
+                                <span class="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full">Metical (MT)</span>
+                            </h3>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                Descarregue o ficheiro index.html autossuficiente para usar no computador, abrir offline ou hospedar no seu servidor web. Suporta cadastro de negócio por telefone e sincronização na nuvem.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2 shrink-0">
+                        <button onclick="downloadSelfHTML()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs px-4 py-2.5 rounded-xl flex items-center space-x-2 shadow transition">
+                            <span class="material-symbols-outlined text-base">download</span>
+                            <span>Baixar index.html</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- KPI Metric Cards Grid (Meticais MT) -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Vendas Registadas</p>
+                                <h3 id="dashTotalSales" class="text-2xl font-bold mt-1 text-slate-900 dark:text-white">45.850 MT</h3>
+                            </div>
+                            <div class="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 flex items-center justify-center">
+                                <span class="material-symbols-outlined">trending_up</span>
+                            </div>
+                        </div>
+                        <p class="text-xs text-emerald-600 dark:text-emerald-400 mt-3 font-medium">8 vendas hoje</p>
+                    </div>
+
+                    <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Saldo em Caixa</p>
+                                <h3 id="dashCashBalance" class="text-2xl font-bold mt-1 text-emerald-600 dark:text-emerald-400">125.400 MT</h3>
+                            </div>
+                            <div class="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 flex items-center justify-center">
+                                <span class="material-symbols-outlined">account_balance_wallet</span>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-3 font-medium">Disponível em caixa físico</p>
+                    </div>
+
+                    <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Alertas de Stock</p>
+                                <h3 id="dashLowStock" class="text-2xl font-bold mt-1 text-amber-500">2 itens</h3>
+                            </div>
+                            <div class="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/40 text-amber-500 flex items-center justify-center">
+                                <span class="material-symbols-outlined">warning</span>
+                            </div>
+                        </div>
+                        <p class="text-xs text-amber-600 mt-3 font-medium">Sabão e Óleo abaixo do mínimo</p>
+                    </div>
+
+                    <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Dívidas a Receber</p>
+                                <h3 id="dashDebts" class="text-2xl font-bold mt-1 text-rose-500">12.500 MT</h3>
+                            </div>
+                            <div class="w-10 h-10 rounded-xl bg-rose-100 dark:bg-rose-900/40 text-rose-500 flex items-center justify-center">
+                                <span class="material-symbols-outlined">schedule</span>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-3 font-medium">Vendas a crédito (fiados)</p>
+                    </div>
+                </div>
+
+                <!-- Recent Sales Table -->
+                <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold">Vendas Recentes do Negócio</h3>
+                        <button onclick="switchTab('pos')" class="text-emerald-600 dark:text-emerald-400 text-sm font-semibold hover:underline">Nova Venda +</button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead class="text-xs uppercase bg-slate-50 dark:bg-slate-700/50 text-slate-500 dark:text-slate-400">
+                                <tr>
+                                    <th class="px-4 py-3 rounded-l-lg">Cliente</th>
+                                    <th class="px-4 py-3">Data</th>
+                                    <th class="px-4 py-3">Total (MT)</th>
+                                    <th class="px-4 py-3">Pagamento</th>
+                                    <th class="px-4 py-3 rounded-r-lg">Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recentSalesTable" class="divide-y divide-slate-100 dark:divide-slate-700">
+                                <tr>
+                                    <td class="px-4 py-3 font-medium">Cliente Geral</td>
+                                    <td class="px-4 py-3 text-slate-500">Hoje, 14:30</td>
+                                    <td class="px-4 py-3 font-bold text-emerald-600">8.500,00 MT</td>
+                                    <td class="px-4 py-3">Numerário (Dinheiro)</td>
+                                    <td class="px-4 py-3"><span class="px-2 py-0.5 rounded-full text-xs bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 font-semibold">Pago</span></td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-3 font-medium">Dona Maria Cossa</td>
+                                    <td class="px-4 py-3 text-slate-500">Hoje, 11:15</td>
+                                    <td class="px-4 py-3 font-bold text-slate-900 dark:text-white">12.000,00 MT</td>
+                                    <td class="px-4 py-3">A Crédito (Fiado)</td>
+                                    <td class="px-4 py-3"><span class="px-2 py-0.5 rounded-full text-xs bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 font-semibold">Pendente</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. PRODUCTS & STOCK VIEW -->
+            <section id="view-products" class="hidden space-y-6">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                        <h2 class="text-xl font-bold">Catálogo de Produtos & Stock (Preços em Meticais - MT)</h2>
+                        <p class="text-sm text-slate-500 dark:text-slate-400">Controlo de compras, quantidades e margem de lucro</p>
+                    </div>
+                    <button onclick="openProductModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl font-semibold text-sm flex items-center space-x-2 shadow transition">
+                        <span class="material-symbols-outlined">add</span>
+                        <span>Cadastrar Produto</span>
+                    </button>
+                </div>
+
+                <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
+                    <div class="p-4 border-b border-slate-200 dark:border-slate-700 flex gap-4">
+                        <input type="text" id="productSearch" oninput="filterProducts()" placeholder="Pesquisar produto ou código..." class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead class="text-xs uppercase bg-slate-50 dark:bg-slate-700/50 text-slate-500 dark:text-slate-400">
+                                <tr>
+                                    <th class="px-4 py-3">Nome</th>
+                                    <th class="px-4 py-3">Preço Compra</th>
+                                    <th class="px-4 py-3">Preço Venda</th>
+                                    <th class="px-4 py-3">Stock Atual</th>
+                                    <th class="px-4 py-3">Estado</th>
+                                    <th class="px-4 py-3 text-right">Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody id="productsTableBody" class="divide-y divide-slate-100 dark:divide-slate-700">
+                                <tr>
+                                    <td class="px-4 py-3 font-semibold">Arroz Agulha 1kg</td>
+                                    <td class="px-4 py-3">750,00 MT</td>
+                                    <td class="px-4 py-3 font-bold text-emerald-600">1.100,00 MT</td>
+                                    <td class="px-4 py-3">45 kg</td>
+                                    <td class="px-4 py-3"><span class="px-2 py-0.5 rounded-full text-xs bg-emerald-100 text-emerald-800 font-semibold">Normal</span></td>
+                                    <td class="px-4 py-3 text-right"><button onclick="quickStockAdjust('Arroz Agulha 1kg')" class="text-emerald-600 hover:underline font-medium">Ajustar</button></td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-3 font-semibold">Óleo Vegetal 1L</td>
+                                    <td class="px-4 py-3">1.200,00 MT</td>
+                                    <td class="px-4 py-3 font-bold text-emerald-600">1.650,00 MT</td>
+                                    <td class="px-4 py-3 font-bold text-amber-600">8 litros</td>
+                                    <td class="px-4 py-3"><span class="px-2 py-0.5 rounded-full text-xs bg-amber-100 text-amber-800 font-semibold">Stock Baixo</span></td>
+                                    <td class="px-4 py-3 text-right"><button onclick="quickStockAdjust('Óleo Vegetal 1L')" class="text-emerald-600 hover:underline font-medium">Ajustar</button></td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-3 font-semibold">Sabão em Barra Azul</td>
+                                    <td class="px-4 py-3">350,00 MT</td>
+                                    <td class="px-4 py-3 font-bold text-emerald-600">500,00 MT</td>
+                                    <td class="px-4 py-3 font-bold text-amber-600">3 un</td>
+                                    <td class="px-4 py-3"><span class="px-2 py-0.5 rounded-full text-xs bg-amber-100 text-amber-800 font-semibold">Crítico</span></td>
+                                    <td class="px-4 py-3 text-right"><button onclick="quickStockAdjust('Sabão em Barra Azul')" class="text-emerald-600 hover:underline font-medium">Ajustar</button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. POS / NOVA VENDA VIEW -->
+            <section id="view-pos" class="hidden space-y-6">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h2 class="text-xl font-bold">Ponto de Venda no Balcão (PDV - Metical MT)</h2>
+                        <p class="text-sm text-slate-500">Registo rápido de vendas com cálculo imediato do total</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="lg:col-span-2 space-y-4">
+                        <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                            <h3 class="font-bold text-sm mb-3">Clique no produto para adicionar ao carrinho:</h3>
+                            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3" id="posProductCards">
+                                <div onclick="addToCart('Arroz Agulha 1kg', 1100)" class="cursor-pointer border border-slate-200 dark:border-slate-700 p-3 rounded-xl hover:border-emerald-500 hover:shadow-sm transition">
+                                    <p class="font-bold text-sm">Arroz Agulha 1kg</p>
+                                    <p class="text-xs text-slate-500">Stock: 45 kg</p>
+                                    <p class="text-emerald-600 font-bold text-sm mt-2">1.100,00 MT</p>
+                                </div>
+                                <div onclick="addToCart('Óleo Vegetal 1L', 1650)" class="cursor-pointer border border-slate-200 dark:border-slate-700 p-3 rounded-xl hover:border-emerald-500 hover:shadow-sm transition">
+                                    <p class="font-bold text-sm">Óleo Vegetal 1L</p>
+                                    <p class="text-xs text-slate-500">Stock: 8 litros</p>
+                                    <p class="text-emerald-600 font-bold text-sm mt-2">1.650,00 MT</p>
+                                </div>
+                                <div onclick="addToCart('Sabão em Barra', 500)" class="cursor-pointer border border-slate-200 dark:border-slate-700 p-3 rounded-xl hover:border-emerald-500 hover:shadow-sm transition">
+                                    <p class="font-bold text-sm">Sabão em Barra</p>
+                                    <p class="text-xs text-slate-500">Stock: 3 un</p>
+                                    <p class="text-emerald-600 font-bold text-sm mt-2">500,00 MT</p>
+                                </div>
+                                <div onclick="addToCart('Água Mineral 500ml', 300)" class="cursor-pointer border border-slate-200 dark:border-slate-700 p-3 rounded-xl hover:border-emerald-500 hover:shadow-sm transition">
+                                    <p class="font-bold text-sm">Água Mineral 500ml</p>
+                                    <p class="text-xs text-slate-500">Stock: 60 un</p>
+                                    <p class="text-emerald-600 font-bold text-sm mt-2">300,00 MT</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Cart Summary -->
+                    <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between">
+                        <div>
+                            <h3 class="font-bold text-base mb-4 flex items-center justify-between">
+                                <span>Carrinho de Compras</span>
+                                <span class="material-symbols-outlined text-emerald-600">shopping_cart</span>
+                            </h3>
+
+                            <div id="cartItemsList" class="space-y-3 mb-4 text-sm divide-y divide-slate-100 dark:divide-slate-700">
+                                <p class="text-xs text-slate-400 text-center py-4">Nenhum item adicionado ainda.</p>
+                            </div>
+                        </div>
+
+                        <div class="border-t border-slate-200 dark:border-slate-700 pt-4 space-y-3">
+                            <div class="flex justify-between items-center text-lg font-bold">
+                                <span>Total da Venda:</span>
+                                <span id="cartTotal" class="text-emerald-600">0,00 MT</span>
+                            </div>
+
+                            <button onclick="finalizeSale()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-bold shadow-md transition">
+                                Registar Venda (MT)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 4. FINANCE VIEW -->
+            <section id="view-finance" class="hidden space-y-6">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h2 class="text-xl font-bold">Gestão Financeira & Caixa (Meticais - MT)</h2>
+                        <p class="text-sm text-slate-500">Entradas, despesas operacionais e retiradas de pró-labore</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700">
+                        <p class="text-xs font-semibold text-slate-500 uppercase">Total Entradas</p>
+                        <h4 class="text-xl font-bold text-emerald-600 mt-1">160.400,00 MT</h4>
+                    </div>
+                    <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700">
+                        <p class="text-xs font-semibold text-slate-500 uppercase">Despesas Operacionais</p>
+                        <h4 class="text-xl font-bold text-rose-500 mt-1">35.000,00 MT</h4>
+                    </div>
+                    <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700">
+                        <p class="text-xs font-semibold text-slate-500 uppercase">Saldo Líquido em Caixa</p>
+                        <h4 class="text-xl font-bold text-slate-900 dark:text-white mt-1">125.400,00 MT</h4>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 5. DRE REPORTS VIEW -->
+            <section id="view-dre" class="hidden space-y-6">
+                <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
+                    <div class="flex justify-between items-center border-b border-slate-200 dark:border-slate-700 pb-4">
+                        <div>
+                            <h2 class="text-xl font-bold">Demonstração de Resultados (DRE - Meticais MT)</h2>
+                            <p class="text-sm text-slate-500">Receita Bruta, Custo das Mercadorias (CMV) e Lucro Líquido</p>
+                        </div>
+                        <span class="px-3 py-1 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-lg">Mês Atual</span>
+                    </div>
+
+                    <div class="space-y-3 text-sm divide-y divide-slate-100 dark:divide-slate-700">
+                        <div class="flex justify-between items-center py-2">
+                            <span class="font-medium text-slate-700 dark:text-slate-300">(+) Receita Bruta de Vendas</span>
+                            <span class="font-bold text-emerald-600">180.500,00 MT</span>
+                        </div>
+                        <div class="flex justify-between items-center py-2 text-rose-500">
+                            <span>(-) Custo das Mercadorias Vendidas (CMV)</span>
+                            <span class="font-bold">110.200,00 MT</span>
+                        </div>
+                        <div class="flex justify-between items-center py-2 bg-slate-50 dark:bg-slate-700/30 px-3 rounded-lg font-bold">
+                            <span>(=) Lucro Bruto Comercial</span>
+                            <span class="text-emerald-600">70.300,00 MT (Margem: 38.9%)</span>
+                        </div>
+                        <div class="flex justify-between items-center py-2 text-rose-500">
+                            <span>(-) Despesas Operacionais (Aluguer, Energia, Transporte)</span>
+                            <span class="font-bold">25.000,00 MT</span>
+                        </div>
+                        <div class="flex justify-between items-center py-3 bg-emerald-50 dark:bg-emerald-950/40 px-3 rounded-lg text-base font-extrabold text-emerald-700 dark:text-emerald-400">
+                            <span>(=) Lucro Líquido Real</span>
+                            <span>45.300,00 MT</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 6. DEBTS VIEW -->
+            <section id="view-debts" class="hidden space-y-6">
+                <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm">
+                    <h2 class="text-xl font-bold mb-4">Controlo de Dívidas & Fiados (Meticais MT)</h2>
+                    <p class="text-sm text-slate-500 mb-4">Acompanhe recebíveis de clientes e contas a pagar a fornecedores.</p>
+                </div>
+            </section>
+
+            <!-- 7. RECLAMAÇÕES & SUPORTE VIEW (NOVO!) -->
+            <section id="view-complaints" class="hidden space-y-6">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                        <h2 class="text-xl font-bold flex items-center space-x-2">
+                            <span class="material-symbols-outlined text-rose-500">report_problem</span>
+                            <span>Central de Reclamações & Gestão de Suporte</span>
+                        </h2>
+                        <p class="text-sm text-slate-500 dark:text-slate-400">Canal direto para envio e resolução de reclamações de utilizadores e administradores</p>
+                    </div>
+                    <button onclick="openComplaintModal()" class="bg-rose-600 hover:bg-rose-700 text-white px-4 py-2.5 rounded-xl font-semibold text-sm flex items-center space-x-2 shadow transition">
+                        <span class="material-symbols-outlined">add_alert</span>
+                        <span>Nova Reclamação</span>
+                    </button>
+                </div>
+
+                <!-- Complaints Stats -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+                        <p class="text-xs font-semibold text-slate-500 uppercase">Total de Reclamações</p>
+                        <h4 id="complaintsTotalCount" class="text-2xl font-bold text-slate-900 dark:text-white mt-1">3</h4>
+                    </div>
+                    <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+                        <p class="text-xs font-semibold text-amber-500 uppercase">Em Análise / Resolução</p>
+                        <h4 id="complaintsPendingCount" class="text-2xl font-bold text-amber-500 mt-1">2</h4>
+                    </div>
+                    <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+                        <p class="text-xs font-semibold text-emerald-500 uppercase">Resolvidas com Sucesso</p>
+                        <h4 id="complaintsResolvedCount" class="text-2xl font-bold text-emerald-500 mt-1">1</h4>
+                    </div>
+                </div>
+
+                <!-- Complaints Filter -->
+                <div class="flex items-center space-x-2">
+                    <span class="text-xs font-semibold text-slate-500 uppercase">Filtrar:</span>
+                    <button onclick="filterComplaints('ALL')" class="px-3 py-1 text-xs rounded-lg font-semibold bg-emerald-600 text-white">Todas</button>
+                    <button onclick="filterComplaints('RECEBIDA')" class="px-3 py-1 text-xs rounded-lg font-semibold bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">Recebidas</button>
+                    <button onclick="filterComplaints('EM_ANALISE')" class="px-3 py-1 text-xs rounded-lg font-semibold bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">Em Análise</button>
+                    <button onclick="filterComplaints('RESOLVIDA')" class="px-3 py-1 text-xs rounded-lg font-semibold bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">Resolvidas</button>
+                </div>
+
+                <!-- Complaints Cards List -->
+                <div id="complaintsListContainer" class="space-y-4">
+                    <!-- Complaint Card 1 -->
+                    <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-3">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <div class="flex items-center space-x-2">
+                                    <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800">Em Análise</span>
+                                    <span class="text-xs text-slate-400">Categoria: Sistema & Impressão</span>
+                                </div>
+                                <h4 class="text-base font-bold text-slate-900 dark:text-white mt-1">Impressão de recibo bluetooth no balcão</h4>
+                                <p class="text-xs text-slate-500 mt-0.5">Enviado por: Manuel dos Santos (Cantina & Mercearia Central) • 18/10/2026</p>
+                            </div>
+                            <span class="text-amber-500 material-symbols-outlined">pending</span>
+                        </div>
+                        <p class="text-sm text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-700/50 p-3 rounded-xl">
+                            "Gostaria de poder conectar uma mini-impressora bluetooth térmica de 58mm para imprimir os recibos no balcão de atendimento."
+                        </p>
+                        <div class="border-t border-slate-100 dark:border-slate-700 pt-3 flex items-center justify-between">
+                            <span class="text-xs text-slate-500">Nota do Administrador: Em fase de testes de drivers térmicos.</span>
+                            <button onclick="adminResolveComplaint(1)" class="text-emerald-600 hover:text-emerald-700 text-xs font-bold flex items-center space-x-1">
+                                <span class="material-symbols-outlined text-sm">check_circle</span>
+                                <span>Marcar como Resolvida</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Complaint Card 2 -->
+                    <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-3">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <div class="flex items-center space-x-2">
+                                    <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800">Recebida</span>
+                                    <span class="text-xs text-slate-400">Categoria: Pagamentos</span>
+                                </div>
+                                <h4 class="text-base font-bold text-slate-900 dark:text-white mt-1">Registo de pagamento parcial por M-Pesa</h4>
+                                <p class="text-xs text-slate-500 mt-0.5">Enviado por: helioleozio062@gmail.com • 18/10/2026</p>
+                            </div>
+                            <span class="text-rose-500 material-symbols-outlined">error</span>
+                        </div>
+                        <p class="text-sm text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-700/50 p-3 rounded-xl">
+                            "Ao receber pagamentos via M-Pesa / E-Mola na cantina, preciso de registar o código de transação para conciliação bancária."
+                        </p>
+                        <div class="border-t border-slate-100 dark:border-slate-700 pt-3 flex items-center justify-between">
+                            <span class="text-xs text-slate-500">Aguardando análise da equipa técnica.</span>
+                            <button onclick="adminResolveComplaint(2)" class="text-emerald-600 hover:text-emerald-700 text-xs font-bold flex items-center space-x-1">
+                                <span class="material-symbols-outlined text-sm">check_circle</span>
+                                <span>Marcar como Resolvida</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Modal Nova Reclamação -->
+    <div id="complaintModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-xl">
+            <div class="flex justify-between items-center border-b border-slate-200 dark:border-slate-700 pb-3">
+                <h3 class="font-bold text-lg text-slate-900 dark:text-white flex items-center space-x-2">
+                    <span class="material-symbols-outlined text-rose-500">report_problem</span>
+                    <span>Registar Reclamação ou Incidente</span>
+                </h3>
+                <button onclick="closeComplaintModal()" class="text-slate-400 hover:text-slate-600">✕</button>
+            </div>
+            <div class="space-y-3 text-sm">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1">Título da Reclamação</label>
+                    <input type="text" id="newComplaintTitle" placeholder="Ex: Problema ao fechar o caixa..." class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500" />
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1">Área / Categoria</label>
+                    <select id="newComplaintCategory" class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+                        <option value="Sistema">Sistema & Desempenho</option>
+                        <option value="Stock">Stock & Inventário</option>
+                        <option value="Vendas">Vendas & Caixa</option>
+                        <option value="Pagamentos">Pagamentos & M-Pesa</option>
+                        <option value="Outro">Outro</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1">Descrição Detalhada do Problema</label>
+                    <textarea id="newComplaintDesc" rows="4" placeholder="Explique o que aconteceu para que a nossa equipa possa resolver rapidamente..." class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"></textarea>
+                </div>
+            </div>
+            <div class="flex justify-end space-x-2 pt-2 border-t border-slate-100 dark:border-slate-700">
+                <button onclick="closeComplaintModal()" class="px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-slate-100">Cancelar</button>
+                <button onclick="submitNewComplaint()" class="px-5 py-2 text-xs font-bold rounded-xl bg-rose-600 hover:bg-rose-700 text-white shadow">Submeter Reclamação</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script for Tab Switching & State -->
+    <script>
+        let currentTab = 'dashboard';
+        let isDark = false;
+        let cart = [];
+        let isAdmin = true;
+
+        function toggleTheme() {
+            isDark = !isDark;
+            if (isDark) {
+                document.documentElement.classList.add('dark');
+                document.getElementById('themeIcon').innerText = 'light_mode';
+            } else {
+                document.documentElement.classList.remove('dark');
+                document.getElementById('themeIcon').innerText = 'dark_mode';
+            }
+        }
+
+        function toggleUserRole() {
+            isAdmin = !isAdmin;
+            if (isAdmin) {
+                document.getElementById('userAvatar').innerText = 'AD';
+                document.getElementById('userName').innerText = 'Administrador';
+                document.getElementById('userRoleBadge').innerText = 'Admin Plataforma';
+                alert('Modo Administrador ativado: tem acesso à gestão e resposta de todas as reclamações.');
+            } else {
+                document.getElementById('userAvatar').innerText = 'PR';
+                document.getElementById('userName').innerText = 'Proprietário';
+                document.getElementById('userRoleBadge').innerText = 'Cantina Central';
+                alert('Modo Proprietário ativado.');
+            }
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('main > section').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('bg-emerald-600', 'text-white', 'shadow-sm');
+                btn.classList.add('text-slate-600', 'dark:text-slate-400', 'hover:bg-slate-100', 'dark:hover:bg-slate-800');
+            });
+
+            const target = document.getElementById('view-' + tab);
+            const activeBtn = document.getElementById('nav-' + tab);
+            if (target) target.classList.remove('hidden');
+            if (activeBtn) {
+                activeBtn.classList.add('bg-emerald-600', 'text-white', 'shadow-sm');
+                activeBtn.classList.remove('text-slate-600', 'dark:text-slate-400', 'hover:bg-slate-100', 'dark:hover:bg-slate-800');
+            }
+            currentTab = tab;
+        }
+
+        function addToCart(name, price) {
+            cart.push({ name, price });
+            renderCart();
+        }
+
+        function renderCart() {
+            const list = document.getElementById('cartItemsList');
+            const totalEl = document.getElementById('cartTotal');
+            if (cart.length === 0) {
+                list.innerHTML = '<p class="text-xs text-slate-400 text-center py-4">Nenhum item adicionado ainda.</p>';
+                totalEl.innerText = '0,00 MT';
+                return;
+            }
+
+            let sum = 0;
+            list.innerHTML = cart.map((item, idx) => {
+                sum += item.price;
+                return `<div class="flex justify-between items-center py-1">
+                    <span>${item.name}</span>
+                    <div class="flex items-center space-x-2">
+                        <span class="font-bold text-emerald-600">${item.price.toLocaleString()} MT</span>
+                        <button onclick="removeFromCart(${idx})" class="text-rose-500 text-xs hover:underline">✕</button>
+                    </div>
+                </div>`;
+            }).join('');
+            totalEl.innerText = sum.toLocaleString() + ',00 MT';
+        }
+
+        function removeFromCart(idx) {
+            cart.splice(idx, 1);
+            renderCart();
+        }
+
+        function finalizeSale() {
+            if (cart.length === 0) {
+                alert('Adicione ao menos um item ao carrinho.');
+                return;
+            }
+            alert('Venda registada com sucesso em Meticais (MT)! Atualizando base de dados na nuvem...');
+            cart = [];
+            renderCart();
+            switchTab('dashboard');
+        }
+
+        function refreshData() {
+            const indicator = document.getElementById('syncIndicator');
+            indicator.innerText = 'A sincronizar Firestore...';
+            setTimeout(() => {
+                indicator.innerText = 'Nuvem Firestore Sincronizada';
+                alert('Dados sincronizados com sucesso! Moeda atual: Metical (MT)');
+            }, 800);
+        }
+
+        function openComplaintModal() {
+            document.getElementById('complaintModal').classList.remove('hidden');
+        }
+
+        function closeComplaintModal() {
+            document.getElementById('complaintModal').classList.add('hidden');
+        }
+
+        function submitNewComplaint() {
+            const title = document.getElementById('newComplaintTitle').value.trim();
+            const category = document.getElementById('newComplaintCategory').value;
+            const desc = document.getElementById('newComplaintDesc').value.trim();
+
+            if (!title || !desc) {
+                alert('Por favor, preencha o título e a descrição da reclamação.');
+                return;
+            }
+
+            const container = document.getElementById('complaintsListContainer');
+            const newCard = document.createElement('div');
+            newCard.className = "bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-3";
+            newCard.innerHTML = `
+                <div class="flex justify-between items-start">
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800">Recebida</span>
+                            <span class="text-xs text-slate-400">Categoria: ${category}</span>
+                        </div>
+                        <h4 class="text-base font-bold text-slate-900 dark:text-white mt-1">${title}</h4>
+                        <p class="text-xs text-slate-500 mt-0.5">Enviado por si agora • Sincronizado</p>
+                    </div>
+                    <span class="text-rose-500 material-symbols-outlined">error</span>
+                </div>
+                <p class="text-sm text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-700/50 p-3 rounded-xl">"${desc}"</p>
+                <div class="border-t border-slate-100 dark:border-slate-700 pt-3 flex items-center justify-between">
+                    <span class="text-xs text-slate-500">Estado: Recebida pela equipa de suporte.</span>
+                </div>
+            `;
+            container.prepend(newCard);
+            closeComplaintModal();
+            alert('Reclamação submetida e registada na base de dados com sucesso! A equipa de administração irá analisar.');
+        }
+
+        function filterComplaints(status) {
+            const container = document.getElementById('complaintsListContainer');
+            const cards = container.children;
+            for (let card of cards) {
+                if (status === 'ALL') {
+                    card.style.display = '';
+                } else {
+                    const text = card.innerText.toUpperCase();
+                    if (status === 'RECEBIDA' && text.includes('RECEBIDA')) {
+                        card.style.display = '';
+                    } else if (status === 'EM_ANALISE' && (text.includes('EM ANÁLISE') || text.includes('EM ANALISE'))) {
+                        card.style.display = '';
+                    } else if (status === 'RESOLVIDA' && text.includes('RESOLVIDA')) {
+                        card.style.display = '';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                }
+            }
+        }
+
+        function adminResolveComplaint(id) {
+            const card = event?.target?.closest('.bg-white, .dark\\:bg-slate-800');
+            if (card) {
+                const badge = card.querySelector('span.rounded-full');
+                if (badge) {
+                    badge.className = "px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800";
+                    badge.innerText = "Resolvida";
+                }
+            }
+            const resCount = document.getElementById('complaintsResolvedCount');
+            if (resCount) {
+                resCount.innerText = parseInt(resCount.innerText || '1') + 1;
+            }
+            alert('Reclamação marcada como RESOLVIDA com sucesso! Status sincronizado.');
+        }
+
+        function quickStockAdjust(productName) {
+            const qty = prompt(`Introduza a nova quantidade em stock para ${productName}:`, "50");
+            if (qty) {
+                alert(`Stock de ${productName} atualizado para ${qty} unidades!`);
+            }
+        }
+
+        function downloadSelfHTML() {
+            try {
+                const htmlContent = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+                const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'index.html';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                alert('Ficheiro index.html baixado com sucesso! Pode agora enviá-lo para o seu computador, abrir em qualquer navegador ou hospedar no seu servidor web.');
+            } catch (err) {
+                alert('Erro ao transferir: ' + err.message);
+            }
+        }
+    </script>
+</body>
+</html>

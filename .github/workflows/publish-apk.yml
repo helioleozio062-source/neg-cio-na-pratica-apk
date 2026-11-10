@@ -1,0 +1,78 @@
+name: Publish Debug APK Release
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'apk-distribution/app-debug.apk'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    name: Publish APK to GitHub Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Validate Precompiled APK and Integrity
+        run: |
+          set -e
+          echo "Checking APK file presence..."
+          if [ ! -f "apk-distribution/app-debug.apk" ]; then
+            echo "Error: apk-distribution/app-debug.apk not found!" >&2
+            exit 1
+          fi
+
+          echo "Validating SHA-256 checksum..."
+          cd apk-distribution
+          sha256sum -c app-debug.apk.sha256
+
+          echo "Verifying APK archive integrity..."
+          unzip -tq app-debug.apk
+          echo "APK is valid and intact."
+
+      - name: Create or Update GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          TAG_NAME="debug-apk-build-${{ github.run_number }}-${{ github.run_attempt }}"
+          RELEASE_TITLE="Debug APK (Build ${{ github.run_number }})"
+          CHECKSUM=$(cat apk-distribution/app-debug.apk.sha256 | awk '{print $1}')
+          FILE_SIZE=$(ls -lh apk-distribution/app-debug.apk | awk '{print $5}')
+
+          RELEASE_NOTES=$(cat <<EOF
+          ### Negócio na Prática — Debug APK Build
+
+          Direct installable Android debug APK compiled directly from Google AI Studio.
+
+          - **Application:** Negócio na Prática
+          - **File:** \`app-debug.apk\`
+          - **Size:** ${FILE_SIZE}
+          - **SHA-256:** \`${CHECKSUM}\`
+          - **Generated:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+
+          #### Direct Download
+          Download \`app-debug.apk\` directly from the release assets below.
+          EOF
+          )
+
+          echo "Publishing GitHub Release ${TAG_NAME}..."
+          gh release create "${TAG_NAME}" \
+            apk-distribution/app-debug.apk \
+            --title "${RELEASE_TITLE}" \
+            --notes "${RELEASE_NOTES}" \
+            --latest
+
+      - name: Build Summary
+        run: |
+          echo "### APK Release Published Successfully! :rocket:" >> $GITHUB_STEP_SUMMARY
+          echo "- **File:** \`app-debug.apk\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Size:** $(ls -lh apk-distribution/app-debug.apk | awk '{print $5}')" >> $GITHUB_STEP_SUMMARY
+          echo "- **SHA-256:** \`$(cat apk-distribution/app-debug.apk.sha256 | awk '{print $1}')\`" >> $GITHUB_STEP_SUMMARY

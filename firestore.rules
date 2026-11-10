@@ -1,0 +1,280 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Global helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Entity validation functions
+    function isValidUser(data) {
+      return data.userId is string && data.userId.size() <= 128 &&
+             data.email is string && data.email.size() <= 200 &&
+             data.fullName is string && data.fullName.size() <= 100 &&
+             (data.role in ['OWNER', 'ADMIN']) &&
+             data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    function isValidBusiness(data) {
+      return data.userId is string && data.userId.size() <= 128 &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 120 &&
+             data.activityType is string && data.activityType.size() <= 80 &&
+             data.currencySymbol is string && data.currencySymbol.size() <= 10 &&
+             data.defaultUnit is string && data.defaultUnit.size() <= 20 &&
+             (!('phone' in data) || (data.phone is string && data.phone.size() <= 40)) &&
+             (!('address' in data) || (data.address is string && data.address.size() <= 200)) &&
+             (!('taxNumber' in data) || (data.taxNumber is string && data.taxNumber.size() <= 60)) &&
+             data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    function isValidCategory(data) {
+      return data.userId is string && data.userId.size() <= 128 &&
+             data.businessId is string && data.businessId.size() <= 128 &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 60 &&
+             (!('iconName' in data) || (data.iconName is string && data.iconName.size() <= 50)) &&
+             data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    function isValidProduct(data) {
+      return data.userId is string && data.userId.size() <= 128 &&
+             data.businessId is string && data.businessId.size() <= 128 &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 120 &&
+             data.purchasePrice is number && data.purchasePrice >= 0 &&
+             data.sellingPrice is number && data.sellingPrice >= 0 &&
+             data.currentStock is number &&
+             data.unit is string && data.unit.size() <= 20 &&
+             (!('categoryId' in data) || (data.categoryId is string && data.categoryId.size() <= 128)) &&
+             (!('sku' in data) || (data.sku is string && data.sku.size() <= 80)) &&
+             (!('minStockAlert' in data) || (data.minStockAlert is number && data.minStockAlert >= 0)) &&
+             (!('sizes' in data) || (data.sizes is string && data.sizes.size() <= 100)) &&
+             (!('colors' in data) || (data.colors is string && data.colors.size() <= 100)) &&
+             (!('isActive' in data) || data.isActive is bool) &&
+             data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    function isValidStockMovement(data) {
+      return data.userId is string && data.userId.size() <= 128 &&
+             data.businessId is string && data.businessId.size() <= 128 &&
+             data.productId is string && data.productId.size() <= 128 &&
+             data.type is string && data.type.size() <= 40 &&
+             data.quantity is number &&
+             data.previousStock is number &&
+             data.newStock is number &&
+             (!('unitCost' in data) || (data.unitCost is number && data.unitCost >= 0)) &&
+             (!('reason' in data) || (data.reason is string && data.reason.size() <= 200)) &&
+             (!('productName' in data) || (data.productName is string && data.productName.size() <= 120)) &&
+             data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    function isValidSale(data) {
+      return data.userId is string && data.userId.size() <= 128 &&
+             data.businessId is string && data.businessId.size() <= 128 &&
+             data.totalAmount is number && data.totalAmount >= 0 &&
+             (data.paymentStatus in ['PAID', 'CREDIT']) &&
+             data.paymentMethod is string && data.paymentMethod.size() <= 40 &&
+             data.amountPaid is number && data.amountPaid >= 0 &&
+             (!('customerName' in data) || (data.customerName is string && data.customerName.size() <= 100)) &&
+             (!('discount' in data) || (data.discount is number && data.discount >= 0)) &&
+             (!('amountDue' in data) || (data.amountDue is number && data.amountDue >= 0)) &&
+             (!('notes' in data) || (data.notes is string && data.notes.size() <= 300)) &&
+             (!('isCancelled' in data) || data.isCancelled is bool) &&
+             data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    function isValidFinancialTransaction(data) {
+      return data.userId is string && data.userId.size() <= 128 &&
+             data.businessId is string && data.businessId.size() <= 128 &&
+             data.type is string && data.type.size() <= 50 &&
+             data.category is string && data.category.size() <= 60 &&
+             data.amount is number &&
+             data.description is string && data.description.size() <= 200 &&
+             (!('referenceId' in data) || (data.referenceId is string && data.referenceId.size() <= 128)) &&
+             (!('paymentMethod' in data) || (data.paymentMethod is string && data.paymentMethod.size() <= 40)) &&
+             data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    function isValidDebt(data) {
+      return data.userId is string && data.userId.size() <= 128 &&
+             data.businessId is string && data.businessId.size() <= 128 &&
+             (data.type in ['RECEIVABLE', 'PAYABLE']) &&
+             data.partyName is string && data.partyName.size() > 0 && data.partyName.size() <= 100 &&
+             data.initialAmount is number && data.initialAmount >= 0 &&
+             data.remainingAmount is number && data.remainingAmount >= 0 &&
+             (data.status in ['PENDING', 'PARTIAL', 'PAID']) &&
+             (!('referenceId' in data) || (data.referenceId is string && data.referenceId.size() <= 128)) &&
+             data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    function isValidFeedback(data) {
+      return data.userId is string && data.userId.size() <= 128 &&
+             data.userEmail is string && data.userEmail.size() <= 200 &&
+             (data.type in ['REVIEW', 'COMPLAINT', 'SUGGESTION']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 120 &&
+             data.description is string && data.description.size() > 0 && data.description.size() <= 1000 &&
+             (data.status in ['RECEBIDA', 'EM_ANALISE', 'EM_RESOLUCAO', 'RESOLVIDA']) &&
+             (!('businessName' in data) || (data.businessName is string && data.businessName.size() <= 120)) &&
+             (!('rating' in data) || (data.rating is number && data.rating >= 1 && data.rating <= 5)) &&
+             (!('category' in data) || (data.category is string && data.category.size() <= 60)) &&
+             (!('adminNotes' in data) || (data.adminNotes is string && data.adminNotes.size() <= 1000)) &&
+             data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    // Admins collection
+    match /admins/{adminId} {
+      allow get: if isSignedIn();
+      allow list, write: if false;
+    }
+
+    // Users
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
+      allow create: if isOwner(userId) &&
+                       incoming().userId == request.auth.uid &&
+                       isValidUser(incoming());
+      allow update: if (isOwner(userId) &&
+                        incoming().userId == existing().userId &&
+                        incoming().createdAt == existing().createdAt &&
+                        incoming().role == existing().role &&
+                        isValidUser(incoming())) ||
+                       isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Businesses
+    match /businesses/{businessId} {
+      allow get: if (isSignedIn() && existing().userId == request.auth.uid) || isAdmin();
+      allow list: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin();
+      allow create: if isSignedIn() &&
+                       incoming().userId == request.auth.uid &&
+                       isValidBusiness(incoming());
+      allow update: if ((isSignedIn() && existing().userId == request.auth.uid &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidBusiness(incoming())) || isAdmin());
+      allow delete: if (isSignedIn() && existing().userId == request.auth.uid) || isAdmin();
+    }
+
+    // Categories
+    match /categories/{categoryId} {
+      allow get: if isSignedIn() && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() &&
+                       incoming().userId == request.auth.uid &&
+                       isValidCategory(incoming());
+      allow update: if isSignedIn() && existing().userId == request.auth.uid &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       isValidCategory(incoming());
+      allow delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+
+    // Products
+    match /products/{productId} {
+      allow get: if isSignedIn() && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() &&
+                       incoming().userId == request.auth.uid &&
+                       isValidProduct(incoming());
+      allow update: if isSignedIn() && existing().userId == request.auth.uid &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       isValidProduct(incoming());
+      allow delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+
+    // Stock Movements (Immutable audit log)
+    match /stock_movements/{movementId} {
+      allow get: if isSignedIn() && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() &&
+                       incoming().userId == request.auth.uid &&
+                       isValidStockMovement(incoming());
+      allow update, delete: if false;
+    }
+
+    // Sales
+    match /sales/{saleId} {
+      allow get: if isSignedIn() && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() &&
+                       incoming().userId == request.auth.uid &&
+                       isValidSale(incoming());
+      allow update: if isSignedIn() && existing().userId == request.auth.uid &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       isValidSale(incoming());
+      allow delete: if false;
+    }
+
+    // Financial Transactions
+    match /financial_transactions/{transactionId} {
+      allow get: if isSignedIn() && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() &&
+                       incoming().userId == request.auth.uid &&
+                       isValidFinancialTransaction(incoming());
+      allow update: if isSignedIn() && existing().userId == request.auth.uid &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       isValidFinancialTransaction(incoming());
+      allow delete: if false;
+    }
+
+    // Debts
+    match /debts/{debtId} {
+      allow get: if isSignedIn() && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() &&
+                       incoming().userId == request.auth.uid &&
+                       isValidDebt(incoming());
+      allow update: if isSignedIn() && existing().userId == request.auth.uid &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       isValidDebt(incoming());
+      allow delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+
+    // Feedbacks
+    match /feedbacks/{feedbackId} {
+      allow get: if (isSignedIn() && existing().userId == request.auth.uid) || isAdmin();
+      allow list: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin();
+      allow create: if isSignedIn() &&
+                       incoming().userId == request.auth.uid &&
+                       isValidFeedback(incoming());
+      allow update: if (isAdmin() && isValidFeedback(incoming())) ||
+                       (isSignedIn() && existing().userId == request.auth.uid &&
+                        incoming().userId == existing().userId &&
+                        incoming().createdAt == existing().createdAt &&
+                        incoming().status == existing().status &&
+                        isValidFeedback(incoming()));
+      allow delete: if isAdmin();
+    }
+  }
+}
