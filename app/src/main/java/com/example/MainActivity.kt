@@ -106,6 +106,7 @@ fun MainAppContent(viewModel: MainViewModel) {
             AppScreen.ADMIN_PANEL,
             AppScreen.FEEDBACK,
             AppScreen.SETTINGS,
+            AppScreen.SERVICES,
             AppScreen.PRODUCTS_STOCK,
             AppScreen.POS_SALES,
             AppScreen.DEBTS,
@@ -193,6 +194,18 @@ fun MainAppContent(viewModel: MainViewModel) {
                         onClick = { viewModel.navigateTo(AppScreen.DASHBOARD) },
                         icon = { Icon(Icons.Default.Dashboard, contentDescription = null) },
                         label = { Text("Painel", fontSize = 10.sp) },
+                        colors = NavigationRailItemDefaults.colors(
+                            selectedIconColor = EmeraldPrimary,
+                            selectedTextColor = EmeraldPrimary,
+                            unselectedIconColor = SlateTextSecondaryDark,
+                            unselectedTextColor = SlateTextSecondaryDark
+                        )
+                    )
+                    NavigationRailItem(
+                        selected = currentScreen == AppScreen.SERVICES,
+                        onClick = { viewModel.navigateTo(AppScreen.SERVICES) },
+                        icon = { Icon(Icons.Default.Handyman, contentDescription = null) },
+                        label = { Text("Serviços", fontSize = 10.sp) },
                         colors = NavigationRailItemDefaults.colors(
                             selectedIconColor = EmeraldPrimary,
                             selectedTextColor = EmeraldPrimary,
@@ -458,6 +471,13 @@ fun MainAppContent(viewModel: MainViewModel) {
                             modifier = Modifier.testTag("nav_dashboard")
                         )
                         NavigationBarItem(
+                            selected = currentScreen == AppScreen.SERVICES,
+                            onClick = { viewModel.navigateTo(AppScreen.SERVICES) },
+                            icon = { Icon(if (currentScreen == AppScreen.SERVICES) Icons.Default.Handyman else Icons.Outlined.Handyman, contentDescription = null) },
+                            label = { Text("Serviços") },
+                            modifier = Modifier.testTag("nav_services")
+                        )
+                        NavigationBarItem(
                             selected = currentScreen == AppScreen.PRODUCTS_STOCK,
                             onClick = { viewModel.navigateTo(AppScreen.PRODUCTS_STOCK) },
                             icon = { Icon(if (currentScreen == AppScreen.PRODUCTS_STOCK) Icons.Default.Inventory2 else Icons.Outlined.Inventory2, contentDescription = null) },
@@ -521,6 +541,7 @@ fun ScreenRouter(currentScreen: AppScreen, viewModel: MainViewModel) {
         AppScreen.REGISTER -> RegisterScreen(viewModel = viewModel)
         AppScreen.BUSINESS_SETUP -> BusinessSetupScreen(viewModel = viewModel)
         AppScreen.DASHBOARD -> DashboardScreen(viewModel = viewModel)
+        AppScreen.SERVICES -> com.example.ui.screens.services.ServicesScreen(viewModel = viewModel)
         AppScreen.PRODUCTS_STOCK -> ProductsScreen(viewModel = viewModel)
         AppScreen.POS_SALES -> SalesScreen(viewModel = viewModel)
         AppScreen.DEBTS -> DebtsScreen(viewModel = viewModel)

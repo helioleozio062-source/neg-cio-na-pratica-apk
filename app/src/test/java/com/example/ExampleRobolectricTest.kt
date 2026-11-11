@@ -281,4 +281,59 @@ class ExampleRobolectricTest {
         // Missing address fails
         assertFalse(validName.isNotBlank() && validActivity.isNotBlank() && validCity.isNotBlank() && "".isNotBlank())
     }
+
+    @Test
+    fun `test service financial calculation and partial payments`() {
+        // Exemplo exigido no Requisito 2:
+        // Serviço: Reparação de equipamento.
+        // Valor acordado: 5.000 MT.
+        // Valor recebido: 2.000 MT.
+        // Valor pendente: 3.000 MT.
+        // Despesas: 1.000 MT.
+        // Resultado estimado: 4.000 MT.
+        val agreedPrice = 5000.0
+        val initialReceived = 2000.0
+        val expenses = 1000.0
+
+        val service = com.example.data.model.ServiceEntity(
+            businessId = "biz-123",
+            title = "Reparação de equipamento",
+            customerName = "Sr. Alberto Matusse",
+            agreedPrice = agreedPrice,
+            amountReceived = initialReceived,
+            estimatedExpenses = expenses,
+            status = "EM_EXECUCAO"
+        )
+
+        assertEquals(3000.0, service.amountPending, 0.001)
+        assertEquals(4000.0, service.estimatedNetResult, 0.001)
+
+        // Pagamento complementar de 3.000 MT
+        val updatedService = service.copy(amountReceived = service.amountReceived + 3000.0, status = "CONCLUIDO")
+        assertEquals(0.0, updatedService.amountPending, 0.001)
+        assertEquals(5000.0, updatedService.amountReceived, 0.001)
+    }
+
+    @Test
+    fun `test service adaptation recognition for diverse businesses`() {
+        // Salão de beleza
+        assertTrue(com.example.util.BusinessProfileUtils.isSalonOrBarber("Salão de beleza"))
+        assertTrue(com.example.util.BusinessProfileUtils.isServiceBusiness("Salão de beleza"))
+
+        // Barbearia
+        assertTrue(com.example.util.BusinessProfileUtils.isSalonOrBarber("Barbearia"))
+        assertTrue(com.example.util.BusinessProfileUtils.isServiceBusiness("Barbearia"))
+
+        // Prestação de serviços geral / Oficina mecânica / Informática
+        assertTrue(com.example.util.BusinessProfileUtils.isServiceBusiness("Prestação de serviços"))
+        assertTrue(com.example.util.BusinessProfileUtils.isServiceBusiness("Oficina mecânica"))
+        assertTrue(com.example.util.BusinessProfileUtils.isServiceBusiness("Reparação de equipamentos"))
+        assertTrue(com.example.util.BusinessProfileUtils.isServiceBusiness("Consultoria de Informática"))
+        assertTrue(com.example.util.BusinessProfileUtils.isServiceBusiness("Fotografia e filmagem"))
+
+        // Negócio híbrido (Ex: Salão que vende champôs e faz tranças)
+        val hybridActivity = "Salão de beleza"
+        assertTrue(com.example.util.BusinessProfileUtils.isServiceBusiness(hybridActivity))
+        // Consegue aceder tanto a serviços como a stock de produtos
+    }
 }

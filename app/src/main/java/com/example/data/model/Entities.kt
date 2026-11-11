@@ -193,3 +193,92 @@ data class ReservationEntity(
     val createdAt: Long = System.currentTimeMillis()
 )
 
+/**
+ * Catálogo de Serviços que o prestador oferece habitualmente (Requisito 3)
+ * Ex: Tranças, Corte de cabelo, Reparação de motor, Formatação, etc.
+ */
+@Entity(tableName = "service_catalog")
+data class ServiceCatalogEntity(
+    @PrimaryKey val id: String = UUID.randomUUID().toString(),
+    val businessId: String,
+    val name: String,
+    val category: String = "Geral",
+    val description: String = "",
+    val standardPrice: Double = 0.0,
+    val estimatedDurationMinutes: Int = 60,
+    val notes: String = "",
+    val isActive: Boolean = true,
+    val createdAt: Long = System.currentTimeMillis()
+)
+
+/**
+ * Módulo Completo de Gestão de Serviços (Requisitos 1 e 2)
+ * Estados: "AGENDADO", "PENDENTE", "EM_EXECUCAO", "CONCLUIDO", "CANCELADO"
+ */
+@Entity(tableName = "services")
+data class ServiceEntity(
+    @PrimaryKey val id: String = UUID.randomUUID().toString(),
+    val businessId: String,
+    val serviceCatalogId: String = "", // Opcional, se veio do catálogo
+    val title: String, // Nome do serviço
+    val category: String = "Geral",
+    val customerName: String,
+    val customerPhone: String = "",
+    val description: String = "",
+    val status: String = "AGENDADO", // "AGENDADO", "PENDENTE", "EM_EXECUCAO", "CONCLUIDO", "CANCELADO"
+    val scheduledDate: String = "", // e.g. "2026-11-12"
+    val scheduledTime: String = "", // e.g. "14:30"
+    val completedDate: String = "", // Data de conclusão ou realização anterior
+    val location: String = "", // Local da prestação (ex: "No domicílio do cliente", "Na oficina", etc.)
+    val agreedPrice: Double = 0.0, // Preço acordado com o cliente
+    val amountReceived: Double = 0.0, // Valor já recebido (adiantamento ou total)
+    val estimatedExpenses: Double = 0.0, // Despesas previstas / orçadas
+    val notes: String = "",
+    val targetEquipmentOrVehicle: String = "", // Veículo / equipamento / detalhes do cliente (ex: para mecânico / TI)
+    val isPastService: Boolean = false, // Registado como serviço já prestado anteriormente
+    val createdAt: Long = System.currentTimeMillis(),
+    val updatedAt: Long = System.currentTimeMillis()
+) {
+    // Valor pendente por receber
+    val amountPending: Double
+        get() = (agreedPrice - amountReceived).coerceAtLeast(0.0)
+
+    // Resultado estimado = Preço acordado - despesas
+    val estimatedNetResult: Double
+        get() = agreedPrice - estimatedExpenses
+}
+
+/**
+ * Pagamentos de Serviços (Permite adiantamentos, pagamentos parciais e quitação)
+ */
+@Entity(tableName = "service_payments")
+data class ServicePaymentEntity(
+    @PrimaryKey val id: String = UUID.randomUUID().toString(),
+    val serviceId: String,
+    val businessId: String,
+    val amount: Double,
+    val paymentMethod: String = "CASH", // CASH, MPESA, EMOLA, MKESH, CARD, TRANSFER
+    val paymentDate: Long = System.currentTimeMillis(),
+    val notes: String = "", // ex: "Sinal de 50%", "Pagamento final na entrega"
+    val timestamp: Long = System.currentTimeMillis()
+)
+
+/**
+ * Despesas ou Custos associados a um Serviço (Requisitos 1.A, 1.C, 2)
+ * Ex: Compra de peças na oficina, produtos capilares gastos, transporte, etc.
+ */
+@Entity(tableName = "service_expenses")
+data class ServiceExpenseEntity(
+    @PrimaryKey val id: String = UUID.randomUUID().toString(),
+    val serviceId: String,
+    val businessId: String,
+    val description: String,
+    val amount: Double,
+    val isPaid: Boolean = true, // Se já foi efectivamente paga ou apenas prevista
+    val paymentMethod: String = "CASH",
+    val date: Long = System.currentTimeMillis(),
+    val notes: String = "",
+    val timestamp: Long = System.currentTimeMillis()
+)
+
+

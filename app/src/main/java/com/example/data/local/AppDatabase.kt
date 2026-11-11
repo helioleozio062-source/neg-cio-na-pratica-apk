@@ -23,9 +23,13 @@ import kotlinx.coroutines.launch
         DebtEntity::class,
         DebtPaymentEntity::class,
         FeedbackEntity::class,
-        ReservationEntity::class
+        ReservationEntity::class,
+        ServiceCatalogEntity::class,
+        ServiceEntity::class,
+        ServicePaymentEntity::class,
+        ServiceExpenseEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -37,6 +41,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun financeDao(): FinanceDao
     abstract fun feedbackDao(): FeedbackDao
     abstract fun reservationDao(): ReservationDao
+    abstract fun serviceDao(): ServiceDao
+    abstract fun serviceCatalogDao(): ServiceCatalogDao
 
     companion object {
         @Volatile

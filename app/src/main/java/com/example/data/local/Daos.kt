@@ -208,3 +208,84 @@ interface ReservationDao {
     suspend fun getReservationById(id: String): ReservationEntity?
 }
 
+@Dao
+interface ServiceCatalogDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertCatalogItem(item: ServiceCatalogEntity)
+
+    @Update
+    suspend fun updateCatalogItem(item: ServiceCatalogEntity)
+
+    @Delete
+    suspend fun deleteCatalogItem(item: ServiceCatalogEntity)
+
+    @Query("SELECT * FROM service_catalog WHERE businessId = :businessId AND isActive = 1 ORDER BY name ASC")
+    fun getCatalogForBusiness(businessId: String): Flow<List<ServiceCatalogEntity>>
+
+    @Query("SELECT * FROM service_catalog WHERE businessId = :businessId")
+    suspend fun getAllCatalogItemsDirect(businessId: String): List<ServiceCatalogEntity>
+
+    @Query("SELECT * FROM service_catalog")
+    suspend fun getAllCatalogDirect(): List<ServiceCatalogEntity>
+}
+
+@Dao
+interface ServiceDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertService(service: ServiceEntity)
+
+    @Update
+    suspend fun updateService(service: ServiceEntity)
+
+    @Delete
+    suspend fun deleteService(service: ServiceEntity)
+
+    @Query("SELECT * FROM services WHERE businessId = :businessId ORDER BY updatedAt DESC, createdAt DESC")
+    fun getServicesForBusiness(businessId: String): Flow<List<ServiceEntity>>
+
+    @Query("SELECT * FROM services WHERE id = :id LIMIT 1")
+    suspend fun getServiceById(id: String): ServiceEntity?
+
+    @Query("SELECT * FROM services WHERE businessId = :businessId")
+    suspend fun getServicesDirect(businessId: String): List<ServiceEntity>
+
+    @Query("SELECT * FROM services")
+    suspend fun getAllServicesDirect(): List<ServiceEntity>
+
+    // Service Payments
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertServicePayment(payment: ServicePaymentEntity)
+
+    @Query("SELECT * FROM service_payments WHERE serviceId = :serviceId ORDER BY timestamp DESC")
+    fun getPaymentsForServiceFlow(serviceId: String): Flow<List<ServicePaymentEntity>>
+
+    @Query("SELECT * FROM service_payments WHERE serviceId = :serviceId ORDER BY timestamp DESC")
+    suspend fun getPaymentsForServiceDirect(serviceId: String): List<ServicePaymentEntity>
+
+    @Query("SELECT * FROM service_payments WHERE businessId = :businessId ORDER BY timestamp DESC")
+    fun getAllServicePaymentsFlow(businessId: String): Flow<List<ServicePaymentEntity>>
+
+    @Query("SELECT * FROM service_payments")
+    suspend fun getAllServicePaymentsDirect(): List<ServicePaymentEntity>
+
+    // Service Expenses
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertServiceExpense(expense: ServiceExpenseEntity)
+
+    @Delete
+    suspend fun deleteServiceExpense(expense: ServiceExpenseEntity)
+
+    @Query("SELECT * FROM service_expenses WHERE serviceId = :serviceId ORDER BY timestamp DESC")
+    fun getExpensesForServiceFlow(serviceId: String): Flow<List<ServiceExpenseEntity>>
+
+    @Query("SELECT * FROM service_expenses WHERE serviceId = :serviceId ORDER BY timestamp DESC")
+    suspend fun getExpensesForServiceDirect(serviceId: String): List<ServiceExpenseEntity>
+
+    @Query("SELECT * FROM service_expenses WHERE businessId = :businessId ORDER BY timestamp DESC")
+    fun getAllServiceExpensesFlow(businessId: String): Flow<List<ServiceExpenseEntity>>
+
+    @Query("SELECT * FROM service_expenses")
+    suspend fun getAllServiceExpensesDirect(): List<ServiceExpenseEntity>
+}
+
+

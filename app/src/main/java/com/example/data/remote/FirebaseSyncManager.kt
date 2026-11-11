@@ -204,6 +204,89 @@ class FirebaseSyncManager(val db: FirebaseFirestore) {
                 count++
             }
 
+            // 7. Sync Services (Requisito 8 e 9)
+            val localServices = localDb.serviceDao().getAllServicesDirect()
+            for (srv in localServices) {
+                val data = hashMapOf<String, Any>(
+                    "userId" to userId,
+                    "businessId" to srv.businessId,
+                    "serviceCatalogId" to srv.serviceCatalogId,
+                    "title" to srv.title,
+                    "category" to srv.category,
+                    "customerName" to srv.customerName,
+                    "customerPhone" to srv.customerPhone,
+                    "description" to srv.description,
+                    "status" to srv.status,
+                    "scheduledDate" to srv.scheduledDate,
+                    "scheduledTime" to srv.scheduledTime,
+                    "completedDate" to srv.completedDate,
+                    "location" to srv.location,
+                    "agreedPrice" to srv.agreedPrice,
+                    "amountReceived" to srv.amountReceived,
+                    "estimatedExpenses" to srv.estimatedExpenses,
+                    "notes" to srv.notes,
+                    "targetEquipmentOrVehicle" to srv.targetEquipmentOrVehicle,
+                    "isPastService" to srv.isPastService,
+                    "createdAt" to FieldValue.serverTimestamp()
+                )
+                db.collection("services").document(srv.id).set(data, SetOptions.merge()).await()
+                count++
+            }
+
+            // Pull remote services
+            val remoteServices = db.collection("services")
+                .whereEqualTo("userId", userId)
+                .get()
+                .await()
+            for (doc in remoteServices.documents) {
+                val title = doc.getString("title") ?: continue
+                val existing = localDb.serviceDao().getServiceById(doc.id)
+                if (existing == null) {
+                    localDb.serviceDao().insertService(
+                        ServiceEntity(
+                            id = doc.id,
+                            businessId = doc.getString("businessId") ?: "",
+                            serviceCatalogId = doc.getString("serviceCatalogId") ?: "",
+                            title = title,
+                            category = doc.getString("category") ?: "Geral",
+                            customerName = doc.getString("customerName") ?: "Cliente Geral",
+                            customerPhone = doc.getString("customerPhone") ?: "",
+                            description = doc.getString("description") ?: "",
+                            status = doc.getString("status") ?: "AGENDADO",
+                            scheduledDate = doc.getString("scheduledDate") ?: "",
+                            scheduledTime = doc.getString("scheduledTime") ?: "",
+                            completedDate = doc.getString("completedDate") ?: "",
+                            location = doc.getString("location") ?: "",
+                            agreedPrice = (doc.get("agreedPrice") as? Number)?.toDouble() ?: 0.0,
+                            amountReceived = (doc.get("amountReceived") as? Number)?.toDouble() ?: 0.0,
+                            estimatedExpenses = (doc.get("estimatedExpenses") as? Number)?.toDouble() ?: 0.0,
+                            notes = doc.getString("notes") ?: "",
+                            targetEquipmentOrVehicle = doc.getString("targetEquipmentOrVehicle") ?: "",
+                            isPastService = doc.getBoolean("isPastService") ?: false
+                        )
+                    )
+                }
+            }
+
+            // 8. Sync Service Catalog
+            val localCatalog = localDb.serviceCatalogDao().getAllCatalogDirect()
+            for (item in localCatalog) {
+                val data = hashMapOf<String, Any>(
+                    "userId" to userId,
+                    "businessId" to item.businessId,
+                    "name" to item.name,
+                    "category" to item.category,
+                    "description" to item.description,
+                    "standardPrice" to item.standardPrice,
+                    "estimatedDurationMinutes" to item.estimatedDurationMinutes,
+                    "notes" to item.notes,
+                    "isActive" to item.isActive,
+                    "createdAt" to FieldValue.serverTimestamp()
+                )
+                db.collection("service_catalog").document(item.id).set(data, SetOptions.merge()).await()
+                count++
+            }
+
             SyncStatus(
                 inProgress = false,
                 lastSyncTime = System.currentTimeMillis(),

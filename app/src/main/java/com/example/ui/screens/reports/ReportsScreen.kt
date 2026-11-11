@@ -247,6 +247,80 @@ fun ReportsScreen(viewModel: MainViewModel) {
             }
         }
 
+        // Relatório de Prestação de Serviços (Requisito 7)
+        if ((dreReport?.totalServicesCount ?: 0) > 0) {
+            item {
+                SectionHeader(title = "Desempenho dos Serviços Prestados")
+            }
+
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("Total de Serviços Registados:", fontSize = 13.sp)
+                            Text("${dreReport?.totalServicesCount ?: 0}", fontWeight = FontWeight.Bold)
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("Serviços Concluídos:", fontSize = 13.sp)
+                            Text("${dreReport?.completedServicesCount ?: 0}", fontWeight = FontWeight.Bold, color = StatusSuccess)
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("Serviços Agendados / Em Execução:", fontSize = 13.sp)
+                            Text("${(dreReport?.scheduledServicesCount ?: 0) + (dreReport?.inProgressServicesCount ?: 0)}", fontWeight = FontWeight.Bold, color = SkySecondary)
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("Total Efetivamente Recebido:", fontSize = 13.sp)
+                            Text(formatCurrency(dreReport?.totalServicesReceived ?: 0.0, currency), fontWeight = FontWeight.Bold, color = EmeraldPrimary)
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("Valores por Receber (Pendentes):", fontSize = 13.sp)
+                            Text(formatCurrency(dreReport?.totalServicesPending ?: 0.0, currency), fontWeight = FontWeight.Bold, color = AmberTertiary)
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("Despesas / Custos dos Serviços:", fontSize = 13.sp)
+                            Text(formatCurrency(dreReport?.totalServicesExpenses ?: 0.0, currency), fontWeight = FontWeight.Bold, color = StatusError)
+                        }
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("Resultado Líquido dos Serviços:", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Text(
+                                formatCurrency(dreReport?.estimatedServicesNetResult ?: 0.0, currency),
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 15.sp,
+                                color = if ((dreReport?.estimatedServicesNetResult ?: 0.0) >= 0) StatusSuccess else StatusError
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
         // Inventory Valuation Card
         item {
             SectionHeader(title = "Avaliação de Inventário / Stock")

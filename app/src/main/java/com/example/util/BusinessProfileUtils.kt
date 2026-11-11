@@ -96,11 +96,31 @@ object BusinessProfileUtils {
     }
 
     /**
-     * Verifica se é prestação de serviços
+     * Verifica se o negócio presta serviços (Requisito 4: Salão de beleza, Barbearia, Oficina mecânica, Reparação,
+     * Canalização, Electricidade, Construção civil, Limpeza, Fotografia, Design, Informática, Consultoria, Transporte,
+     * Decoração de eventos, etc.)
      */
     fun isServiceBusiness(activityType: String): Boolean {
         val t = activityType.lowercase(Locale.ROOT)
-        return t.contains("serviços") || t.contains("oficina") || t.contains("consultoria")
+        return t.contains("serviços") ||
+                t.contains("salão") ||
+                t.contains("barbearia") ||
+                t.contains("oficina") ||
+                t.contains("mecânic") ||
+                t.contains("reparação") ||
+                t.contains("informática") ||
+                t.contains("consultoria") ||
+                t.contains("fotografia") ||
+                t.contains("filmagem") ||
+                t.contains("design") ||
+                t.contains("limpeza") ||
+                t.contains("canalização") ||
+                t.contains("electricidade") ||
+                t.contains("eletricidade") ||
+                t.contains("construção") ||
+                t.contains("transporte") ||
+                t.contains("evento") ||
+                t.contains("estética")
     }
 
     /**

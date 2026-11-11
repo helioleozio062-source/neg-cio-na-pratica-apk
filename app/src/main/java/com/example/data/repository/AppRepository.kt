@@ -20,7 +20,18 @@ data class DreReportData(
     val pendingReceivables: Double,
     val pendingPayables: Double,
     val salesCount: Int,
-    val topSellingProducts: List<TopProductSummary>
+    val topSellingProducts: List<TopProductSummary>,
+    // Indicadores específicos para Prestação de Serviços (Requisito 6)
+    val totalServicesCount: Int = 0,
+    val scheduledServicesCount: Int = 0,
+    val inProgressServicesCount: Int = 0,
+    val completedServicesCount: Int = 0,
+    val cancelledServicesCount: Int = 0,
+    val totalServicesRevenue: Double = 0.0,
+    val totalServicesReceived: Double = 0.0,
+    val totalServicesPending: Double = 0.0,
+    val totalServicesExpenses: Double = 0.0,
+    val estimatedServicesNetResult: Double = 0.0
 )
 
 data class TopProductSummary(
@@ -39,6 +50,8 @@ class AppRepository(val database: AppDatabase) {
     val financeDao = database.financeDao()
     val feedbackDao = database.feedbackDao()
     val reservationDao = database.reservationDao()
+    val serviceDao = database.serviceDao()
+    val serviceCatalogDao = database.serviceCatalogDao()
 
     // Authentication
     suspend fun authenticate(identifier: String, passwordHash: String): UserEntity? {
@@ -207,6 +220,35 @@ class AppRepository(val database: AppDatabase) {
         }
         for (cat in categories) {
             categoryDao.insertCategory(CategoryEntity(businessId = business.id, name = cat))
+        }
+
+        // Criar catálogo padrão de serviços caso seja relevante para a actividade do negócio (Requisitos 3 e 4)
+        val defaultServices = when {
+            activityType.contains("Salão de beleza", true) -> listOf(
+                ServiceCatalogEntity(businessId = business.id, name = "Tranças Afros", category = "Penteados", standardPrice = 1200.0, estimatedDurationMinutes = 180, description = "Tranças africanas completas com postiço"),
+                ServiceCatalogEntity(businessId = business.id, name = "Corte & Escova Feminina", category = "Cabelo", standardPrice = 500.0, estimatedDurationMinutes = 60, description = "Lavagem, corte e modelagem a quente"),
+                ServiceCatalogEntity(businessId = business.id, name = "Tratamento Capilar & Hidratação", category = "Cabelo", standardPrice = 800.0, estimatedDurationMinutes = 90, description = "Hidratação profunda e cauterização"),
+                ServiceCatalogEntity(businessId = business.id, name = "Aplicação de Unhas Gel", category = "Manicure", standardPrice = 700.0, estimatedDurationMinutes = 90, description = "Alongamento em gel com esmaltação duradoura"),
+                ServiceCatalogEntity(businessId = business.id, name = "Maquilhagem Social / Evento", category = "Estética", standardPrice = 1500.0, estimatedDurationMinutes = 90, description = "Make-up para festas, noivados ou casamentos")
+            )
+            activityType.contains("Barbearia", true) -> listOf(
+                ServiceCatalogEntity(businessId = business.id, name = "Corte de Cabelo Masculino", category = "Corte", standardPrice = 200.0, estimatedDurationMinutes = 30, description = "Corte moderno à máquina e tesoura"),
+                ServiceCatalogEntity(businessId = business.id, name = "Barba & Toalha Quente", category = "Barba", standardPrice = 150.0, estimatedDurationMinutes = 25, description = "Design de barba, alinhamento e hidratação"),
+                ServiceCatalogEntity(businessId = business.id, name = "Combo Corte + Barba", category = "Pacote", standardPrice = 300.0, estimatedDurationMinutes = 50, description = "Serviço completo cabelo e barba"),
+                ServiceCatalogEntity(businessId = business.id, name = "Pigmentação de Cabelo / Barba", category = "Coloração", standardPrice = 250.0, estimatedDurationMinutes = 40, description = "Disfarce de falhas com pigmento")
+            )
+            activityType.contains("Prestação de serviços", true) || activityType.contains("Oficina", true) -> listOf(
+                ServiceCatalogEntity(businessId = business.id, name = "Mão de Obra Geral / Diagnóstico", category = "Geral", standardPrice = 1000.0, estimatedDurationMinutes = 120, description = "Avaliação técnica e diagnóstico no local"),
+                ServiceCatalogEntity(businessId = business.id, name = "Manutenção Preventiva", category = "Manutenção", standardPrice = 1500.0, estimatedDurationMinutes = 180, description = "Revisão periódica de funcionamento"),
+                ServiceCatalogEntity(businessId = business.id, name = "Reparação Técnica Especializada", category = "Reparação", standardPrice = 2500.0, estimatedDurationMinutes = 240, description = "Conserto com substituição de componentes"),
+                ServiceCatalogEntity(businessId = business.id, name = "Instalação & Montagem", category = "Instalação", standardPrice = 800.0, estimatedDurationMinutes = 90, description = "Montagem no domicílio ou empresa")
+            )
+            else -> listOf(
+                ServiceCatalogEntity(businessId = business.id, name = "Atendimento Personalizado / Serviço", category = "Geral", standardPrice = 500.0, estimatedDurationMinutes = 60, description = "Serviço prestado ao cliente")
+            )
+        }
+        for (srv in defaultServices) {
+            serviceCatalogDao.insertCatalogItem(srv)
         }
 
         return business
@@ -794,6 +836,20 @@ class AppRepository(val database: AppDatabase) {
             .sortedByDescending { it.totalRevenue }
             .take(6)
 
+        // Estatísticas e Indicadores reais de Serviços (Requisito 6)
+        val allServices = serviceDao.getServicesDirect(businessId)
+        val periodServices = allServices.filter { it.createdAt in startTime..endTime || it.updatedAt in startTime..endTime }
+        val scheduledCount = allServices.count { it.status == "AGENDADO" }
+        val inProgressCount = allServices.count { it.status == "EM_EXECUCAO" }
+        val completedCount = allServices.count { it.status == "CONCLUIDO" }
+        val cancelledCount = allServices.count { it.status == "CANCELADO" }
+
+        val totalServicesRevenue = allServices.filter { it.status == "CONCLUIDO" }.sumOf { it.agreedPrice }
+        val totalServicesReceived = allServices.sumOf { it.amountReceived }
+        val totalServicesPending = allServices.filter { it.status != "CANCELADO" }.sumOf { it.amountPending }
+        val totalServicesExpenses = allServices.sumOf { it.estimatedExpenses }
+        val estimatedServicesNetResult = (totalServicesReceived - totalServicesExpenses)
+
         return DreReportData(
             grossRevenue = grossRevenue,
             costOfGoodsSold = costOfGoodsSold,
@@ -807,8 +863,289 @@ class AppRepository(val database: AppDatabase) {
             pendingReceivables = pendingReceivables,
             pendingPayables = pendingPayables,
             salesCount = allSales.size,
-            topSellingProducts = topProducts
+            topSellingProducts = topProducts,
+            totalServicesCount = allServices.size,
+            scheduledServicesCount = scheduledCount,
+            inProgressServicesCount = inProgressCount,
+            completedServicesCount = completedCount,
+            cancelledServicesCount = cancelledCount,
+            totalServicesRevenue = totalServicesRevenue,
+            totalServicesReceived = totalServicesReceived,
+            totalServicesPending = totalServicesPending,
+            totalServicesExpenses = totalServicesExpenses,
+            estimatedServicesNetResult = estimatedServicesNetResult
         )
+    }
+
+    // =========================================================================
+    // MÓDULO DE GESTÃO DE SERVIÇOS & CATÁLOGO (Requisitos 1, 2, 3)
+    // =========================================================================
+
+    fun getServices(businessId: String): Flow<List<ServiceEntity>> =
+        serviceDao.getServicesForBusiness(businessId)
+
+    suspend fun getServiceById(id: String): ServiceEntity? =
+        serviceDao.getServiceById(id)
+
+    suspend fun registerService(
+        businessId: String,
+        serviceCatalogId: String = "",
+        title: String,
+        category: String = "Geral",
+        customerName: String,
+        customerPhone: String = "",
+        description: String = "",
+        status: String = "AGENDADO",
+        scheduledDate: String = "",
+        scheduledTime: String = "",
+        completedDate: String = "",
+        location: String = "",
+        agreedPrice: Double,
+        initialPayment: Double = 0.0,
+        estimatedExpenses: Double = 0.0,
+        paymentMethod: String = "CASH",
+        notes: String = "",
+        targetEquipmentOrVehicle: String = "",
+        isPastService: Boolean = false
+    ): ServiceEntity {
+        val now = System.currentTimeMillis()
+        val received = initialPayment.coerceAtMost(agreedPrice).coerceAtLeast(0.0)
+
+        val service = ServiceEntity(
+            businessId = businessId,
+            serviceCatalogId = serviceCatalogId,
+            title = title.trim(),
+            category = category.trim().ifBlank { "Geral" },
+            customerName = customerName.trim().ifBlank { "Cliente Geral" },
+            customerPhone = PhoneUtils.normalizeMozambiquePhone(customerPhone) ?: customerPhone.trim(),
+            description = description.trim(),
+            status = status,
+            scheduledDate = scheduledDate.trim(),
+            scheduledTime = scheduledTime.trim(),
+            completedDate = completedDate.trim(),
+            location = location.trim(),
+            agreedPrice = agreedPrice,
+            amountReceived = received,
+            estimatedExpenses = estimatedExpenses,
+            notes = notes.trim(),
+            targetEquipmentOrVehicle = targetEquipmentOrVehicle.trim(),
+            isPastService = isPastService,
+            createdAt = now,
+            updatedAt = now
+        )
+        serviceDao.insertService(service)
+
+        // Se houve adiantamento ou pagamento no acto do registo (Requisito 2)
+        if (received > 0) {
+            val payment = ServicePaymentEntity(
+                serviceId = service.id,
+                businessId = businessId,
+                amount = received,
+                paymentMethod = paymentMethod,
+                paymentDate = now,
+                notes = if (isPastService) "Pagamento de serviço realizado anteriormente" else "Pagamento / Sinal inicial",
+                timestamp = now
+            )
+            serviceDao.insertServicePayment(payment)
+
+            // Registar dinheiro efectivo no caixa (Requisito 2: Não duplica, dinheiro realmente recebido)
+            financeDao.insertTransaction(
+                FinancialTransactionEntity(
+                    businessId = businessId,
+                    type = "INCOME_SALE",
+                    category = "Serviços",
+                    amount = received,
+                    description = "Recebimento por serviço: ${service.title} (${service.customerName})",
+                    referenceId = service.id,
+                    paymentMethod = paymentMethod,
+                    timestamp = now
+                )
+            )
+        }
+
+        // Se houver saldo pendente e o serviço já foi concluído ou é passado, criar registo de dívida a receber
+        val pending = service.amountPending
+        if (pending > 0 && (status == "CONCLUIDO" || isPastService)) {
+            financeDao.insertDebt(
+                DebtEntity(
+                    businessId = businessId,
+                    type = "RECEIVABLE",
+                    partyName = service.customerName,
+                    phone = service.customerPhone,
+                    description = "Serviço prestado: ${service.title}",
+                    initialAmount = pending,
+                    remainingAmount = pending,
+                    status = "PENDING",
+                    referenceId = service.id,
+                    notes = "Origem: Módulo de Serviços (#${service.id.takeLast(6)})"
+                )
+            )
+        }
+
+        return service
+    }
+
+    suspend fun updateServiceStatus(
+        serviceId: String,
+        newStatus: String,
+        completedDate: String = ""
+    ) {
+        val s = serviceDao.getServiceById(serviceId) ?: return
+        val wasNotCompleted = s.status != "CONCLUIDO"
+        val isNowCompleted = newStatus == "CONCLUIDO"
+
+        val updated = s.copy(
+            status = newStatus,
+            completedDate = if (isNowCompleted && completedDate.isNotBlank()) completedDate else if (isNowCompleted && s.completedDate.isBlank()) java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date()) else s.completedDate,
+            updatedAt = System.currentTimeMillis()
+        )
+        serviceDao.updateService(updated)
+
+        // Se acabou de ser concluído e ainda tem valor por receber, garantir que aparece como dívida a receber (Requisito 2)
+        if (wasNotCompleted && isNowCompleted && updated.amountPending > 0) {
+            val existingDebts = financeDao.getDebtsForBusiness(s.businessId).first()
+            val alreadyCreated = existingDebts.any { it.referenceId == s.id }
+            if (!alreadyCreated) {
+                financeDao.insertDebt(
+                    DebtEntity(
+                        businessId = s.businessId,
+                        type = "RECEIVABLE",
+                        partyName = s.customerName,
+                        phone = s.customerPhone,
+                        description = "Serviço concluído: ${s.title}",
+                        initialAmount = updated.amountPending,
+                        remainingAmount = updated.amountPending,
+                        status = "PENDING",
+                        referenceId = s.id,
+                        notes = "Origem: Conclusão de Serviço (#${s.id.takeLast(6)})"
+                    )
+                )
+            }
+        }
+    }
+
+    suspend fun addServicePayment(
+        serviceId: String,
+        amount: Double,
+        paymentMethod: String = "CASH",
+        notes: String = ""
+    ) {
+        val s = serviceDao.getServiceById(serviceId) ?: return
+        val now = System.currentTimeMillis()
+        val paymentAmount = amount.coerceAtMost(s.amountPending)
+
+        if (paymentAmount <= 0.0) return
+
+        val newReceived = (s.amountReceived + paymentAmount).coerceAtMost(s.agreedPrice)
+        serviceDao.updateService(s.copy(amountReceived = newReceived, updatedAt = now))
+
+        // Grava no histórico de pagamentos do serviço
+        serviceDao.insertServicePayment(
+            ServicePaymentEntity(
+                serviceId = serviceId,
+                businessId = s.businessId,
+                amount = paymentAmount,
+                paymentMethod = paymentMethod,
+                paymentDate = now,
+                notes = notes.trim().ifBlank { "Pagamento de serviço" },
+                timestamp = now
+            )
+        )
+
+        // Entra no fluxo de caixa real (Requisito 2)
+        financeDao.insertTransaction(
+            FinancialTransactionEntity(
+                businessId = s.businessId,
+                type = "INCOME_SALE",
+                category = "Serviços",
+                amount = paymentAmount,
+                description = "Recebimento por serviço: ${s.title} (${s.customerName})" + if (notes.isNotBlank()) " - $notes" else "",
+                referenceId = serviceId,
+                paymentMethod = paymentMethod,
+                timestamp = now
+            )
+        )
+
+        // Se existia dívida a receber com esta referenceId, abater ou liquidar
+        val debts = financeDao.getDebtsForBusiness(s.businessId).first()
+        val matchingDebt = debts.firstOrNull { it.referenceId == serviceId && it.status != "PAID" }
+        if (matchingDebt != null) {
+            val debtRemaining = (matchingDebt.remainingAmount - paymentAmount).coerceAtLeast(0.0)
+            val debtStatus = if (debtRemaining <= 0.0) "PAID" else "PARTIAL"
+            financeDao.updateDebt(matchingDebt.copy(remainingAmount = debtRemaining, status = debtStatus))
+        }
+    }
+
+    suspend fun addServiceExpense(
+        serviceId: String,
+        description: String,
+        amount: Double,
+        isPaidNow: Boolean = true,
+        paymentMethod: String = "CASH",
+        notes: String = ""
+    ) {
+        val s = serviceDao.getServiceById(serviceId) ?: return
+        val now = System.currentTimeMillis()
+
+        // Adiciona nas despesas estimadas do serviço
+        val updatedExpenses = s.estimatedExpenses + amount
+        serviceDao.updateService(s.copy(estimatedExpenses = updatedExpenses, updatedAt = now))
+
+        serviceDao.insertServiceExpense(
+            ServiceExpenseEntity(
+                serviceId = serviceId,
+                businessId = s.businessId,
+                description = description.trim(),
+                amount = amount,
+                isPaid = isPaidNow,
+                paymentMethod = paymentMethod,
+                date = now,
+                notes = notes.trim(),
+                timestamp = now
+            )
+        )
+
+        // Se foi efectivamente paga na hora, sai do fluxo de caixa (Requisito 2)
+        if (isPaidNow) {
+            financeDao.insertTransaction(
+                FinancialTransactionEntity(
+                    businessId = s.businessId,
+                    type = "EXPENSE_OPERATIONAL",
+                    category = "Custos de Serviços",
+                    amount = amount,
+                    description = "Custo do serviço '${s.title}': $description",
+                    referenceId = serviceId,
+                    paymentMethod = paymentMethod,
+                    timestamp = now
+                )
+            )
+        }
+    }
+
+    suspend fun getPaymentsForService(serviceId: String): List<ServicePaymentEntity> =
+        serviceDao.getPaymentsForServiceDirect(serviceId)
+
+    suspend fun getExpensesForService(serviceId: String): List<ServiceExpenseEntity> =
+        serviceDao.getExpensesForServiceDirect(serviceId)
+
+    suspend fun deleteService(service: ServiceEntity) {
+        serviceDao.deleteService(service)
+    }
+
+    // Catálogo de Serviços (Requisito 3)
+    fun getServiceCatalog(businessId: String): Flow<List<ServiceCatalogEntity>> =
+        serviceCatalogDao.getCatalogForBusiness(businessId)
+
+    suspend fun addServiceCatalogItem(item: ServiceCatalogEntity) {
+        serviceCatalogDao.insertCatalogItem(item)
+    }
+
+    suspend fun updateServiceCatalogItem(item: ServiceCatalogEntity) {
+        serviceCatalogDao.updateCatalogItem(item)
+    }
+
+    suspend fun deleteServiceCatalogItem(item: ServiceCatalogEntity) {
+        serviceCatalogDao.deleteCatalogItem(item)
     }
 
     // Feedback & Platform Admin

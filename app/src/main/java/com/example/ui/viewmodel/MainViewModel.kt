@@ -16,6 +16,7 @@ enum class AppScreen {
     REGISTER,
     BUSINESS_SETUP,
     DASHBOARD,
+    SERVICES, // Módulo de Gestão de Serviços (Requisito 1)
     PRODUCTS_STOCK,
     POS_SALES,
     DEBTS,
@@ -98,6 +99,13 @@ class MainViewModel(
 
     private val _reservations = MutableStateFlow<List<ReservationEntity>>(emptyList())
     val reservations: StateFlow<List<ReservationEntity>> = _reservations.asStateFlow()
+
+    // Gestão de Serviços & Catálogo (Requisitos 1, 2, 3)
+    private val _services = MutableStateFlow<List<ServiceEntity>>(emptyList())
+    val services: StateFlow<List<ServiceEntity>> = _services.asStateFlow()
+
+    private val _serviceCatalog = MutableStateFlow<List<ServiceCatalogEntity>>(emptyList())
+    val serviceCatalog: StateFlow<List<ServiceCatalogEntity>> = _serviceCatalog.asStateFlow()
 
     private val _allPlatformBusinesses = MutableStateFlow<List<BusinessEntity>>(emptyList())
     val allPlatformBusinesses: StateFlow<List<BusinessEntity>> = _allPlatformBusinesses.asStateFlow()
@@ -495,6 +503,12 @@ class MainViewModel(
         }
         viewModelScope.launch {
             repository.getReservations(businessId).collect { _reservations.value = it }
+        }
+        viewModelScope.launch {
+            repository.getServices(businessId).collect { _services.value = it; refreshDreReport() }
+        }
+        viewModelScope.launch {
+            repository.getServiceCatalog(businessId).collect { _serviceCatalog.value = it }
         }
     }
 
@@ -1048,6 +1062,194 @@ class MainViewModel(
                 onSuccess()
             } catch (e: Exception) {
                 _uiMessage.value = "Erro ao enviar pedido de novo negócio: ${e.message}"
+            }
+        }
+    }
+
+    // =========================================================================
+    // MÓDULO DE GESTÃO DE SERVIÇOS & CATÁLOGO (Requisitos 1, 2, 3, 4, 5, 7)
+    // =========================================================================
+
+    fun registerService(
+        serviceCatalogId: String = "",
+        title: String,
+        category: String = "Geral",
+        customerName: String,
+        customerPhone: String = "",
+        description: String = "",
+        status: String = "AGENDADO",
+        scheduledDate: String = "",
+        scheduledTime: String = "",
+        completedDate: String = "",
+        location: String = "",
+        agreedPrice: Double,
+        initialPayment: Double = 0.0,
+        estimatedExpenses: Double = 0.0,
+        paymentMethod: String = "CASH",
+        notes: String = "",
+        targetEquipmentOrVehicle: String = "",
+        isPastService: Boolean = false,
+        onSuccess: () -> Unit = {}
+    ) {
+        val b = _activeBusiness.value ?: return
+        viewModelScope.launch {
+            try {
+                repository.registerService(
+                    businessId = b.id,
+                    serviceCatalogId = serviceCatalogId,
+                    title = title,
+                    category = category,
+                    customerName = customerName,
+                    customerPhone = customerPhone,
+                    description = description,
+                    status = status,
+                    scheduledDate = scheduledDate,
+                    scheduledTime = scheduledTime,
+                    completedDate = completedDate,
+                    location = location,
+                    agreedPrice = agreedPrice,
+                    initialPayment = initialPayment,
+                    estimatedExpenses = estimatedExpenses,
+                    paymentMethod = paymentMethod,
+                    notes = notes,
+                    targetEquipmentOrVehicle = targetEquipmentOrVehicle,
+                    isPastService = isPastService
+                )
+                _uiMessage.value = if (isPastService) {
+                    "Serviço anterior '$title' registado com sucesso no histórico!"
+                } else {
+                    "Serviço '$title' registado com sucesso para $customerName!"
+                }
+                refreshDreReport()
+                onSuccess()
+            } catch (e: Exception) {
+                _uiMessage.value = "Erro ao registar serviço: ${e.message}"
+            }
+        }
+    }
+
+    fun updateServiceStatus(serviceId: String, newStatus: String, completedDate: String = "") {
+        viewModelScope.launch {
+            try {
+                repository.updateServiceStatus(serviceId, newStatus, completedDate)
+                _uiMessage.value = "Estado do serviço atualizado para '$newStatus'!"
+                refreshDreReport()
+            } catch (e: Exception) {
+                _uiMessage.value = "Erro ao atualizar estado: ${e.message}"
+            }
+        }
+    }
+
+    fun addServicePayment(
+        serviceId: String,
+        amount: Double,
+        paymentMethod: String = "CASH",
+        notes: String = "",
+        onSuccess: () -> Unit = {}
+    ) {
+        val b = _activeBusiness.value ?: return
+        viewModelScope.launch {
+            try {
+                repository.addServicePayment(serviceId, amount, paymentMethod, notes)
+                _uiMessage.value = "Pagamento de $amount ${b.currencySymbol} registado com sucesso no caixa!"
+                refreshDreReport()
+                onSuccess()
+            } catch (e: Exception) {
+                _uiMessage.value = "Erro ao registar pagamento: ${e.message}"
+            }
+        }
+    }
+
+    fun addServiceExpense(
+        serviceId: String,
+        description: String,
+        amount: Double,
+        isPaidNow: Boolean = true,
+        paymentMethod: String = "CASH",
+        notes: String = "",
+        onSuccess: () -> Unit = {}
+    ) {
+        val b = _activeBusiness.value ?: return
+        viewModelScope.launch {
+            try {
+                repository.addServiceExpense(serviceId, description, amount, isPaidNow, paymentMethod, notes)
+                _uiMessage.value = "Despesa de $amount ${b.currencySymbol} associada ao serviço!"
+                refreshDreReport()
+                onSuccess()
+            } catch (e: Exception) {
+                _uiMessage.value = "Erro ao associar despesa: ${e.message}"
+            }
+        }
+    }
+
+    suspend fun getPaymentsForService(serviceId: String): List<ServicePaymentEntity> {
+        return repository.getPaymentsForService(serviceId)
+    }
+
+    suspend fun getExpensesForService(serviceId: String): List<ServiceExpenseEntity> {
+        return repository.getExpensesForService(serviceId)
+    }
+
+    fun deleteService(service: ServiceEntity) {
+        viewModelScope.launch {
+            try {
+                repository.deleteService(service)
+                _uiMessage.value = "Serviço '${service.title}' removido."
+                refreshDreReport()
+            } catch (e: Exception) {
+                _uiMessage.value = "Erro ao remover serviço: ${e.message}"
+            }
+        }
+    }
+
+    // Catálogo de Serviços Habitual
+    fun addServiceCatalogItem(
+        name: String,
+        category: String,
+        standardPrice: Double,
+        estimatedDurationMinutes: Int = 60,
+        description: String = "",
+        notes: String = ""
+    ) {
+        val b = _activeBusiness.value ?: return
+        viewModelScope.launch {
+            try {
+                repository.addServiceCatalogItem(
+                    ServiceCatalogEntity(
+                        businessId = b.id,
+                        name = name.trim(),
+                        category = category.trim().ifBlank { "Geral" },
+                        standardPrice = standardPrice,
+                        estimatedDurationMinutes = estimatedDurationMinutes,
+                        description = description.trim(),
+                        notes = notes.trim()
+                    )
+                )
+                _uiMessage.value = "Serviço '$name' adicionado ao catálogo com sucesso!"
+            } catch (e: Exception) {
+                _uiMessage.value = "Erro ao adicionar ao catálogo: ${e.message}"
+            }
+        }
+    }
+
+    fun updateServiceCatalogItem(item: ServiceCatalogEntity) {
+        viewModelScope.launch {
+            try {
+                repository.updateServiceCatalogItem(item)
+                _uiMessage.value = "Catálogo de serviço atualizado!"
+            } catch (e: Exception) {
+                _uiMessage.value = "Erro ao atualizar catálogo: ${e.message}"
+            }
+        }
+    }
+
+    fun deleteServiceCatalogItem(item: ServiceCatalogEntity) {
+        viewModelScope.launch {
+            try {
+                repository.deleteServiceCatalogItem(item)
+                _uiMessage.value = "Item removido do catálogo."
+            } catch (e: Exception) {
+                _uiMessage.value = "Erro ao remover do catálogo: ${e.message}"
             }
         }
     }

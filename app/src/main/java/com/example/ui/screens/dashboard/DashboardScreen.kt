@@ -37,6 +37,7 @@ fun DashboardScreen(viewModel: MainViewModel) {
     val products by viewModel.products.collectAsState()
     val sales by viewModel.sales.collectAsState()
     val reservations by viewModel.reservations.collectAsState()
+    val services by viewModel.services.collectAsState()
 
     val currency = activeBusiness?.currencySymbol ?: "MT"
     val activityType = activeBusiness?.activityType ?: "Geral"
@@ -180,24 +181,42 @@ fun DashboardScreen(viewModel: MainViewModel) {
 
                     Spacer(modifier = Modifier.height(18.dp))
 
-                    // 4 Quick Action Buttons matching Stitch Design System
+                    // Quick Action Buttons matching Stitch Design System (Adaptado para Serviços e Vendas - Requisitos 4, 5 e 6)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Button(
+                            onClick = { viewModel.navigateTo(AppScreen.SERVICES) },
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(44.dp)
+                                .testTag("quick_action_servicos"),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary),
+                            contentPadding = PaddingValues(horizontal = 4.dp)
+                        ) {
+                            Icon(Icons.Default.Handyman, contentDescription = null, modifier = Modifier.size(15.dp))
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Text("Serviços", fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                        }
+
+                        FilledTonalButton(
                             onClick = { viewModel.navigateTo(AppScreen.POS_SALES) },
                             modifier = Modifier
                                 .weight(1f)
                                 .height(44.dp)
                                 .testTag("quick_action_vender"),
                             shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary),
-                            contentPadding = PaddingValues(horizontal = 6.dp)
+                            colors = ButtonDefaults.filledTonalButtonColors(
+                                containerColor = SlateSurfaceVariantDark,
+                                contentColor = Color.White
+                            ),
+                            contentPadding = PaddingValues(horizontal = 4.dp)
                         ) {
-                            Icon(Icons.Default.PointOfSale, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Vender", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            Icon(Icons.Default.PointOfSale, contentDescription = null, modifier = Modifier.size(15.dp))
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Text("Vender", fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
                         }
 
                         FilledTonalButton(
@@ -210,11 +229,11 @@ fun DashboardScreen(viewModel: MainViewModel) {
                                 containerColor = SlateSurfaceVariantDark,
                                 contentColor = Color.White
                             ),
-                            contentPadding = PaddingValues(horizontal = 6.dp)
+                            contentPadding = PaddingValues(horizontal = 4.dp)
                         ) {
-                            Icon(Icons.Default.Inventory2, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Stock", fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                            Icon(Icons.Default.Inventory2, contentDescription = null, modifier = Modifier.size(15.dp))
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Text("Stock", fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
                         }
 
                         FilledTonalButton(
@@ -227,28 +246,11 @@ fun DashboardScreen(viewModel: MainViewModel) {
                                 containerColor = SlateSurfaceVariantDark,
                                 contentColor = Color.White
                             ),
-                            contentPadding = PaddingValues(horizontal = 6.dp)
+                            contentPadding = PaddingValues(horizontal = 4.dp)
                         ) {
-                            Icon(Icons.Default.Receipt, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Despesa", fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
-                        }
-
-                        FilledTonalButton(
-                            onClick = { viewModel.navigateTo(AppScreen.REPORTS_DRE) },
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(44.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.filledTonalButtonColors(
-                                containerColor = SlateSurfaceVariantDark,
-                                contentColor = Color.White
-                            ),
-                            contentPadding = PaddingValues(horizontal = 6.dp)
-                        ) {
-                            Icon(Icons.Default.Assessment, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("DRE", fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                            Icon(Icons.Default.Receipt, contentDescription = null, modifier = Modifier.size(15.dp))
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Text("Despesa", fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
                         }
                     }
                 }
@@ -463,12 +465,13 @@ fun DashboardScreen(viewModel: MainViewModel) {
                     }
                     com.example.util.BusinessProfileUtils.isSalonOrBarber(activityType) -> {
                         MetricCard(
-                            title = "Agendamentos",
-                            value = "${reservations.size} vagas",
-                            icon = Icons.Default.ContentCut,
-                            subtitle = "${reservations.count { it.status == "CONFIRMED" }} confirmados",
+                            title = "Serviços & Agenda",
+                            value = "${services.size} serviços",
+                            icon = Icons.Default.Handyman,
+                            subtitle = "${services.count { it.status == "AGENDADO" }} agendados • ${services.count { it.status == "CONCLUIDO" }} feitos",
                             iconColor = EmeraldPrimary,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
+                            onClick = { viewModel.navigateTo(AppScreen.SERVICES) }
                         )
                         MetricCard(
                             title = "Produtos Utilizados",
@@ -478,6 +481,26 @@ fun DashboardScreen(viewModel: MainViewModel) {
                             iconColor = SkySecondary,
                             modifier = Modifier.weight(1f),
                             onClick = { viewModel.navigateTo(AppScreen.PRODUCTS_STOCK) }
+                        )
+                    }
+                    com.example.util.BusinessProfileUtils.isServiceBusiness(activityType) -> {
+                        MetricCard(
+                            title = "Gestão de Serviços",
+                            value = "${services.size} trabalhos",
+                            icon = Icons.Default.Handyman,
+                            subtitle = "${services.count { it.status == "EM_EXECUCAO" }} em andamento • ${services.count { it.status == "AGENDADO" }} agendados",
+                            iconColor = EmeraldPrimary,
+                            modifier = Modifier.weight(1f),
+                            onClick = { viewModel.navigateTo(AppScreen.SERVICES) }
+                        )
+                        MetricCard(
+                            title = "Trabalhos Concluídos",
+                            value = "${services.count { it.status == "CONCLUIDO" || it.isPastService }} realizados",
+                            icon = Icons.Default.CheckCircle,
+                            subtitle = "Total: ${formatCurrency(dreReport?.totalServicesRevenue ?: 0.0, currency)}",
+                            iconColor = SkySecondary,
+                            modifier = Modifier.weight(1f),
+                            onClick = { viewModel.navigateTo(AppScreen.SERVICES) }
                         )
                     }
                     com.example.util.BusinessProfileUtils.isFoodOrRestaurant(activityType) -> {
@@ -519,6 +542,71 @@ fun DashboardScreen(viewModel: MainViewModel) {
                             onClick = { viewModel.navigateTo(AppScreen.POS_SALES) }
                         )
                     }
+                }
+            }
+        }
+
+        // Se o negócio presta serviços ou tem serviços registados, exibir card de indicadores de serviços (Requisito 6)
+        if (services.isNotEmpty() || com.example.util.BusinessProfileUtils.isServiceBusiness(activityType)) {
+            item {
+                SectionHeader(
+                    title = "Indicadores de Serviços Prestados",
+                    actionText = "Ver Todos",
+                    onActionClick = { viewModel.navigateTo(AppScreen.SERVICES) }
+                )
+            }
+
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    MetricCard(
+                        title = "Recebido por Serviços",
+                        value = formatCurrency(dreReport?.totalServicesReceived ?: 0.0, currency),
+                        icon = Icons.Default.Payments,
+                        subtitle = "${services.count { it.status == "CONCLUIDO" || it.isPastService }} concluídos",
+                        iconColor = EmeraldPrimary,
+                        modifier = Modifier.weight(1f),
+                        onClick = { viewModel.navigateTo(AppScreen.SERVICES) }
+                    )
+
+                    MetricCard(
+                        title = "Serviços a Receber",
+                        value = formatCurrency(dreReport?.totalServicesPending ?: 0.0, currency),
+                        icon = Icons.Default.PendingActions,
+                        subtitle = "${services.count { it.amountPending > 0 }} com saldo pendente",
+                        iconColor = AmberTertiary,
+                        modifier = Modifier.weight(1f),
+                        onClick = { viewModel.navigateTo(AppScreen.SERVICES) }
+                    )
+                }
+            }
+
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    MetricCard(
+                        title = "Custos de Serviços",
+                        value = formatCurrency(dreReport?.totalServicesExpenses ?: 0.0, currency),
+                        icon = Icons.Default.MoneyOff,
+                        subtitle = "Peças e materiais gastos",
+                        iconColor = StatusError,
+                        modifier = Modifier.weight(1f),
+                        onClick = { viewModel.navigateTo(AppScreen.SERVICES) }
+                    )
+
+                    MetricCard(
+                        title = "Resultado dos Serviços",
+                        value = formatCurrency(dreReport?.estimatedServicesNetResult ?: 0.0, currency),
+                        icon = Icons.Default.AccountBalanceWallet,
+                        subtitle = "Lucro gerado pelos serviços",
+                        iconColor = if ((dreReport?.estimatedServicesNetResult ?: 0.0) >= 0) EmeraldPrimary else StatusError,
+                        modifier = Modifier.weight(1f),
+                        onClick = { viewModel.navigateTo(AppScreen.SERVICES) }
+                    )
                 }
             }
         }
